@@ -10,14 +10,10 @@ root.geometry('625x325')
 root.eval('tk::PlaceWindow . center')
 root.configure(bg="light grey")
 
+ingredients = [' AP Flour', ' Wheat Flour', ' Salt', ' Sugar', ' Honey', ' Agave Syrup', ' Baking Soda',
+               ' Baking Powder', ' Brown Sugar', ' Powdered Sugar', ' Buckwheat Flour', ' Rolled Oats']
 
-def convert():
-    ingredient = ingredient_combobox.get()
-    amount = amount_entry.get()
-    unit = unit_combobox.get()
-    convert_unit = unit_combobox2.get()
-    result_text.delete("1.0", END)
-    result_text.insert(END, ingredient + ": " + amount + unit + " -->" + convert_unit)
+units = [' lb', ' oz', ' Cup', ' Gallon', ' Quart', ' Pint', ' teaspoon', ' tablespoons']
 
 
 def clear_text():
@@ -33,6 +29,26 @@ def do_popup(event):
         m.tk_popup(event.x_root, event.y_root)
     finally:
         m.grab_release()
+
+
+def convert():
+    ingredient = ingredient_combobox.get()
+    if ingredient not in ingredients:
+        messagebox.showerror("Invalid Entry", "One or more entry fields are invalid")
+        return
+    amount = amount_entry.get()
+    try:
+        int(amount)
+    except:
+        messagebox.showerror("Invalid Entry", "One or more entry fields are invalid")
+        return
+    unit = unit_combobox.get()
+    if unit not in units:
+        messagebox.showerror("Invalid Entry", "One or more entry fields are invalid")
+        return
+    convert_unit = unit_combobox2.get()
+    result_text.delete("1.0", END)
+    result_text.insert(END, ingredient + ": " + amount + unit + " -->" + convert_unit)
 
 
 m = Menu(root, tearoff=0)
@@ -133,8 +149,8 @@ clear_button = Button(root, text="Clear", command=clear_text)
 result_text = Text(root, height=5, width=60, borderwidth=5)
 result_text.bind('<Button-3>', do_popup)
 
-#Create a tooltip
-convert_tip= Balloon(root)
+# Create a tooltip
+convert_tip = Balloon(root)
 convert_tip.bind_widget(convert_button, balloonmsg="Click to convert")
 ingredient_tip = Balloon(root)
 ingredient_tip.bind_widget(ingredient_combobox, balloonmsg="Click on the dropdown to see a list of ingredients")
