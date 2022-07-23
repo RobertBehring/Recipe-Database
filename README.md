@@ -1,11 +1,22 @@
-# Recipe Ingredient Converter
-# CS 361 - Software Engineering I
-
+# Recipe Ingredient Converter :: CS 361 - Software Engineering I
 
 ## Microservice :: Recipe Ingredient Conversion 
 ### Communication contract
 
 > #### All communications with this microservice are accomplished via the RabbitMQ pipeline.
+
+<details><summary>Microservice description
+</summary>
+<p></br>
+	The <strong>Recipe Ingredient Conversion</strong> microservice is intended to provide users with the ability to convert 
+	recipe ingredients from one unit of measurement to another. Users will be able to convert masses and volumes within and
+	between the metric and imperial unit system. 
+	
+	In order to use this microservice you will need to be able to communicate with it via a RabbitMQ pipeline. You can find
+	details on how to request and receive data below. You can also view how data can be sent and received from this 
+	micoservice via the UML diagram at the bottom of the README.
+</p>
+</details>
 <details><summary>To <strong>request</strong> data from this microservice:
 </summary>
 <p>
@@ -128,7 +139,7 @@ Example:
 </details>
 
 <details><summary>UML Diagram
-</summary>
+</summary></br>
 	
 ![Ingredient conversion microservice UML](https://user-images.githubusercontent.com/91280849/180588469-0de16d88-2d70-4e2e-afa6-d445f4dbca14.png)
 	
