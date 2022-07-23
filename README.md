@@ -1,6 +1,4 @@
-# Recipe Ingredient Converter
-# CS 361 - Software Engineering I
-
+# Recipe Ingredient Converter :: CS 361 - Software Engineering I
 
 ## Microservice :: Recipe Ingredient Conversion 
 ### Communication contract
