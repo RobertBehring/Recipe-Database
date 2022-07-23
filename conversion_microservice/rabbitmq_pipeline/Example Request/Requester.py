@@ -35,10 +35,10 @@ connection = pika.BlockingConnection(
     pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 
-channel.queue_declare(queue='unit conversion')
+channel.queue_declare(queue='conversion request')
 
 channel.basic_publish(exchange='',
-                      routing_key='unit conversion',
+                      routing_key='conversion request',
                       body=json.dumps(data_input)
                       )
 print(" [x] Sent 'Requested data to be converted'")

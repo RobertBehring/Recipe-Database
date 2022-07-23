@@ -1,5 +1,4 @@
 import pika, sys, os
-from ingredient_convert import *
 
 
 # rabbitmq server = "C:\Program Files\RabbitMQ Server\rabbitmq_server-3.10.5"
@@ -8,14 +7,13 @@ def main():
         pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
-    channel.queue_declare(queue='unit conversion')
+    channel.queue_declare(queue='conversion delivery')
 
     def callback(ch, method, properties, body):
         body = body.decode('utf-8')
-        body = conversion(body)
         print(" [x] Received %r" % body)
 
-    channel.basic_consume(queue='unit conversion',
+    channel.basic_consume(queue='conversion delivery',
                           auto_ack=True,
                           on_message_callback=callback)
 
