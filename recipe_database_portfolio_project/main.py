@@ -6,8 +6,6 @@ from tkinter import messagebox
 from tkcalendar import Calendar
 from datetime import date
 import sqlite3
-from microservice_tunnel import *
-from ingredient_convert import *
 import json
 import pika
 
@@ -305,6 +303,9 @@ def main():
         amount_isempty = amount == ''
         ingredient_data = query_one_ingredient(ingredient_id)
         recipe_data = query_one_recipe(recipe_id)
+        ingredient_json = {str(recipe_data[0][1]): [
+            {"ingredient": str(ingredient_data[0][2]), "quantity": str(ingredient_data[0][3]),
+             "measure": str(ingredient_data[0][4]), "desired": str(unit)}]}
         try:
             float(amount)
             amount_isfloat = True
@@ -330,11 +331,8 @@ def main():
         elif not unit_isascii:
             tkinter.messagebox.showerror('Error', 'Unit entry is invalid')
         elif unit != ingredient_data[0][4]:
-            tkinter.messagebox.showinfo('Conversion', 'Unit needs conversion')
-            ingredient_json = {str(recipe_data[0][1]): [
-                {"ingredient": str(ingredient_data[0][2]), "quantity": str(ingredient_data[0][3]),
-                 "measure": str(ingredient_data[0][4]), "desired": str(unit)}]}
             send_ingredient_unit_conversion(ingredient_json)
+            rec_ingredient_unit_conversion(recipe_data, ingredient_data)
         else:
             c.execute("""UPDATE ingredients SET 
                  name = :name,
@@ -397,6 +395,49 @@ def main():
         print(f" [x] Sent '{str(ingredient_json)}'")
 
         connection.close()
+
+    def rec_ingredient_unit_conversion(recipe_data, ingredient_data):
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
+
+        channel.queue_declare(queue='conversion delivery')
+
+        def callback(ch, method, properties, body):
+            ingredient_name = ingredient_data[0][2]
+            recipe_name = recipe_data[0][1]
+            ingredient_id = ingredient_data[0][0]
+            recipe_id = recipe_data[0][0]
+            body = body.decode('utf-8')
+            print(" [x] Received %r" % body)
+            conn = sqlite3.connect('recipes.db')
+            c = conn.cursor()
+            body = json.loads(body)
+            c.execute("""UPDATE ingredients SET
+                 name = :name,
+                 amount = :amount,
+                 unit = :unit
+                 WHERE oid = :oid""",
+                      {
+                          "name": ingredient_name,
+                          "amount": str(round(float(body[recipe_name][0]["quantity"]), 2)),
+                          "unit": body[recipe_name][0]["measure"],
+                          "oid": ingredient_id
+                      }
+                      )
+            conn.commit()
+            conn.close()
+            for widgets in ingredient_table_frame.winfo_children():
+                widgets.destroy()
+            view_ingredient_table(recipe_id)
+            channel.close()
+
+        channel.basic_consume(queue='conversion delivery',
+                              auto_ack=True,
+                              on_message_callback=callback)
+
+        print(' [*] rec_ingredient_unit_conversion() Waiting for messages. To exit press CTRL+C')
+        channel.start_consuming()
 
     # ########### RECIPE TABLES ##################################################
     def view_all_recipes_table():
