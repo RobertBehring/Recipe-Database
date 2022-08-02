@@ -6,6 +6,10 @@ from tkinter import messagebox
 from tkcalendar import Calendar
 from datetime import date
 import sqlite3
+from microservice_tunnel import *
+from ingredient_convert import *
+import json
+import pika
 
 
 def main():
@@ -299,6 +303,8 @@ def main():
         name_isempty = name == ''
         name_isascii = name.isascii()
         amount_isempty = amount == ''
+        ingredient_data = query_one_ingredient(ingredient_id)
+        recipe_data = query_one_recipe(recipe_id)
         try:
             float(amount)
             amount_isfloat = True
@@ -306,6 +312,7 @@ def main():
             amount_isfloat = False
         unit_isempty = unit == ''
         unit_isascii = unit.isascii()
+
         if name_isempty and amount_isempty and unit_isempty:
             tkinter.messagebox.showerror('Error', 'All fields are empty')
         elif name_isempty:
@@ -322,6 +329,12 @@ def main():
             tkinter.messagebox.showerror('Error', 'Amount entry is invalid')
         elif not unit_isascii:
             tkinter.messagebox.showerror('Error', 'Unit entry is invalid')
+        elif unit != ingredient_data[0][4]:
+            tkinter.messagebox.showinfo('Conversion', 'Unit needs conversion')
+            ingredient_json = {str(recipe_data[0][1]): [
+                {"ingredient": str(ingredient_data[0][2]), "quantity": str(ingredient_data[0][3]),
+                 "measure": str(ingredient_data[0][4]), "desired": str(unit)}]}
+            send_ingredient_unit_conversion(ingredient_json)
         else:
             c.execute("""UPDATE ingredients SET 
                  name = :name,
@@ -368,6 +381,22 @@ def main():
         for widgets in ingredient_table_frame.winfo_children():
             widgets.destroy()
         view_ingredient_table(recipe_id)
+
+    # ########### FUNCTIONS ######################################################
+    def send_ingredient_unit_conversion(ingredient_json):
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
+
+        channel.queue_declare(queue='conversion request')
+
+        channel.basic_publish(exchange='',
+                              routing_key='conversion request',
+                              body=json.dumps(ingredient_json)
+                              )
+        print(f" [x] Sent '{str(ingredient_json)}'")
+
+        connection.close()
 
     # ########### RECIPE TABLES ##################################################
     def view_all_recipes_table():
@@ -490,10 +519,10 @@ def main():
                                            bg='dark green', fg='white', borderwidth=7, cursor='hand2')
 
         recipe_info_frame.grid(row=0, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
-        return_button_view_recipe.grid(row=0, column=4, rowspan=2, columnspan=2, pady=25, ipadx=20, ipady=20,
+        return_button_view_recipe.grid(row=0, column=5, rowspan=2, columnspan=2, pady=25, ipadx=20, ipady=20,
                                        sticky='n')
-        ingredient_table_frame.grid(row=1, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
-        add_ingredient_button_view_recipe.grid(row=1, column=4, rowspan=2, columnspan=2, pady=25, ipadx=27, ipady=20,
+        ingredient_table_frame.grid(row=1, column=0, columnspan=5, padx=(25, 50), pady=25, sticky='w')
+        add_ingredient_button_view_recipe.grid(row=1, column=5, rowspan=2, columnspan=2, pady=25, ipadx=27, ipady=20,
                                                sticky='n')
 
     # ############ MODAL WINDOWS #################################################
