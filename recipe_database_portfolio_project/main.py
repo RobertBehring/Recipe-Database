@@ -8,6 +8,7 @@ from datetime import date
 import sqlite3
 import json
 import pika
+import uuid
 
 
 def main():
@@ -251,6 +252,7 @@ def main():
         name_isempty = name == ''
         name_isascii = name.isascii()
         serving_size_isempty = serving_size == ''
+        recipe_data = query_one_recipe(recipe_id)
         try:
             float(serving_size)
             serving_size_isfloat = True
@@ -268,6 +270,9 @@ def main():
             tkinter.messagebox.showerror('Error', 'Name entry is invalid')
         elif not serving_size_isfloat:
             tkinter.messagebox.showerror('Error', 'Serving Size entry is invalid')
+        elif serving_size != recipe_data[0][2]:
+            serving_change = {"servings": [str(int(recipe_data[0][2])), serving_size]}
+            rpc_servings_conversion(recipe_data, serving_change)
         else:
             c.execute("""UPDATE recipes SET 
                  name = :name,
@@ -330,7 +335,7 @@ def main():
             tkinter.messagebox.showerror('Error', 'Amount entry is invalid')
         elif not unit_isascii:
             tkinter.messagebox.showerror('Error', 'Unit entry is invalid')
-        elif unit != ingredient_data[0][4]:
+        elif unit != ingredient_data[0][4] and float(amount) == ingredient_data[0][3]:
             send_ingredient_unit_conversion(ingredient_json)
             rec_ingredient_unit_conversion(recipe_data, ingredient_data)
         else:
@@ -357,6 +362,49 @@ def main():
         conn.close()
         edit_ingredient.destroy()
 
+    def update_many_ingredients_servings_conversion(recipe_id, ingredients):
+        ingredient_data = query_all_ingredients_for_recipe(recipe_id)
+        conn = sqlite3.connect('recipes.db')
+        c = conn.cursor()
+        ingredients = json.loads(ingredients)
+        for i in range(1, len(ingredients)):
+            name = ingredients[i]["ingredient"]
+            amount = ingredients[i]["qty"]
+            unit = ingredients[i]["measure"]
+            ingredient_id = ingredient_data[i-1][0]
+            c.execute("""UPDATE ingredients SET
+                 name = :name,
+                 amount = :amount,
+                 unit = :unit
+                 WHERE oid = :oid""",
+                      {
+                          "name": name,
+                          "amount": amount,
+                          "unit": unit,
+                          "oid": ingredient_id
+                      }
+                      )
+        name = name_entry_edit_recipe.get()
+        serving_size = serving_size_entry_edit_recipe.get()
+        date = date_entry_edit_recipe.get_date()
+        c.execute("""UPDATE recipes SET 
+             name = :name,
+             serving_size = :serving_size,
+             date = :date
+             WHERE oid = :oid""",
+                  {
+                      "name": name,
+                      "serving_size": serving_size,
+                      "date": date,
+                      "oid": recipe_id
+                  }
+                  )
+        conn.commit()
+        conn.close()
+        for widgets in recipe_table_frame.winfo_children():
+            widgets.destroy()
+        view_all_recipes_table()
+
     # DELETE
     def delete_one_recipe(recipe_id):
         conn = sqlite3.connect('recipes.db')
@@ -381,6 +429,43 @@ def main():
         view_ingredient_table(recipe_id)
 
     # ########### FUNCTIONS ######################################################
+    class RpcClient(object):
+
+        def __init__(self):
+            self.connection = pika.BlockingConnection(
+                pika.ConnectionParameters(host='localhost'))
+
+            self.channel = self.connection.channel()
+
+            result = self.channel.queue_declare(queue='', exclusive=True)
+            self.callback_queue = result.method.queue
+
+            self.channel.basic_consume(
+                queue=self.callback_queue,
+                on_message_callback=self.on_response,
+                auto_ack=True)
+
+            self.response = None
+            self.corr_id = None
+
+        def on_response(self, ch, method, props, body):
+            if self.corr_id == props.correlation_id:
+                self.response = body.decode('utf-8')
+
+        def call(self, n):
+            self.response = None
+            self.corr_id = str(uuid.uuid4())
+            self.channel.basic_publish(
+                exchange='',
+                routing_key='data2',
+                properties=pika.BasicProperties(
+                    reply_to=self.callback_queue,
+                    correlation_id=self.corr_id,
+                ),
+                body=str(n))
+            self.connection.process_data_events(time_limit=None)
+            return self.response
+
     def send_ingredient_unit_conversion(ingredient_json):
         connection = pika.BlockingConnection(
             pika.ConnectionParameters('localhost'))
@@ -438,6 +523,20 @@ def main():
 
         print(' [*] rec_ingredient_unit_conversion() Waiting for messages. To exit press CTRL+C')
         channel.start_consuming()
+
+    def rpc_servings_conversion(recipe_data, serving_change):
+        recipe_id = recipe_data[0][0]
+        ingredient_data = query_all_ingredients_for_recipe(recipe_id)
+        conversion_request = [serving_change]
+        for i in range(len(ingredient_data)):
+            ingredient_request = {"ingredient": str(ingredient_data[i][2]), "qty": str(ingredient_data[i][3]),
+                                  "measure": str(ingredient_data[i][4])}
+            conversion_request.append(ingredient_request)
+        conversion_request = json.dumps(conversion_request)
+        rpc = RpcClient()
+        data = rpc.call(conversion_request)
+        update_many_ingredients_servings_conversion(recipe_id, data)
+
 
     # ########### RECIPE TABLES ##################################################
     def view_all_recipes_table():
@@ -498,7 +597,6 @@ def main():
 
     def view_ingredient_table(recipe_id):
         recipe_data = query_all_ingredients_for_recipe(recipe_id)
-        print(len(recipe_data))
         header = [('Name', 'Amount', 'Unit', 'Edit', 'Delete')]
         for i in range(len(header)):
             for j in range(len(header[0])):
