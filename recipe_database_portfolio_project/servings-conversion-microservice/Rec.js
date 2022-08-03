@@ -8,7 +8,7 @@ amqp.connect('amqp://localhost:5672', function(error0, connection) {
         if(error1){
             throw error1;
         }
-        let queue = 'data';
+        let queue = 'data2';
         channel.assertQueue(queue, {
             durable: false
         });
