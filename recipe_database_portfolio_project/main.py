@@ -407,6 +407,8 @@ def main():
 
     # DELETE
     def delete_one_recipe(recipe_id):
+        if not tkinter.messagebox.askokcancel('Delete Warning', 'Deleting this entry is permanent.\nDo you want to continue?'):
+            return
         conn = sqlite3.connect('recipes.db')
         c = conn.cursor()
         c.execute('DELETE FROM recipes WHERE oid=' + str(recipe_id))
@@ -419,6 +421,8 @@ def main():
 
     def delete_one_ingredient(recipe_id, ingredient_id):
         conn = sqlite3.connect('recipes.db')
+        if not tkinter.messagebox.askokcancel('Delete Warning', 'Deleting this entry is permanent.\nDo you want to continue?'):
+            return
         c = conn.cursor()
         c.execute('DELETE FROM ingredients WHERE oid=' + str(ingredient_id))
 
