@@ -68,8 +68,8 @@ def main():
     help_.add_command(label='About Recipe Ingredient Converter', command=None)
 
     # CLOSE ALL WINDOWS, RERUN MAIN
-    def home():
-        view_recipe.destroy()
+    def home(window):
+        window.destroy()
         main()
 
     # ############ DATABASE CRUD FUNCTIONS #######################################
@@ -437,14 +437,16 @@ def main():
     def search_for_recipe_by_name(name):
         conn = sqlite3.connect('recipes.db')
         c = conn.cursor()
-        # c.execute()
-        # recipe = c.fetchall()
+        c.execute('SELECT oid, * FROM recipes WHERE recipes.name LIKE "%' + str(name) + '%"')
+        recipes_data = c.fetchall()
         conn.commit()
         conn.close()
-        # for widgets in recipe_table_frame.winfo_children():
-        #     widgets.destroy()
-        # view_all_recipes_table()
-        # return recipe
+        if recipes_data:
+            for widgets in recipe_table_frame.winfo_children():
+                widgets.destroy()
+            view_all_recipes_table(recipes_data)
+        else:
+            tkinter.messagebox.showerror('No Recipes Exist', 'No recipes exists with the name: ' + name)
 
     # ########### FUNCTIONS ######################################################
     class RpcClient(object):
@@ -556,8 +558,10 @@ def main():
         update_many_ingredients_servings_conversion(recipe_id, data)
 
     # ########### RECIPE TABLES ##################################################
-    def view_all_recipes_table():
-        recipes_data = query_all_recipes()
+    def view_all_recipes_table(recipes_data=None):
+        if recipes_data is None:
+            recipes_data = query_all_recipes()
+
         header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added', 'View', 'Edit', 'Delete')]
         # headers
         for i in range(len(header)):
@@ -594,23 +598,41 @@ def main():
             edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=75, ipady=3)
             delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=75, ipady=3)
 
-    def view_one_recipe_table(recipe_id):
+    def view_one_recipe_table(frame, recipe_id, edit=False):
         recipe_data = query_one_recipe(recipe_id)
-        header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added')]
+        if not edit:
+            header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added')]
+        else:
+            header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added', 'View', 'Edit', 'Delete')]
         # headers
         for i in range(len(header)):
             for j in range(len(header[0])):
-                e = Entry(recipe_info_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
+                e = Entry(frame, width=20, font=main_font_bold, border=2, cursor='arrow')
                 e.grid(row=i, column=j, ipadx=10, ipady=10)
                 e.insert(END, header[i][j])
                 e.config(state='disabled')
         # recipe data
         for i in range(len(recipe_data)):
             for j in range(len(recipe_data[0])):
-                e = Entry(recipe_info_frame, width=20, font=main_font, border=2, cursor='arrow')
+                e = Entry(frame, width=20, font=main_font, border=2, cursor='arrow')
                 e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
                 e.insert(END, recipe_data[i][j])
                 e.config(state='disabled')
+            oid = recipe_data[i][0]
+            name = recipe_data[i][1]
+            if edit:
+                view_button_add_recipe = Button(frame, text="View",
+                                                command=lambda oid=oid, name=name: view_recipe_window(oid, name),
+                                                fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
+                edit_button_add_recipe = Button(frame, text="Edit",
+                                                command=lambda oid=oid, name=name: edit_recipe_modal(oid, name),
+                                                fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
+                delete_button_add_recipe = Button(frame, text="Delete",
+                                                  command=lambda oid=oid: delete_one_recipe(oid), fg='black',
+                                                  font=main_font_underline, borderwidth=5, cursor='hand2')
+                view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=75, ipady=3)
+                edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=75, ipady=3)
+                delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=75, ipady=3)
 
     def view_ingredient_table(recipe_id):
         recipe_data = query_all_ingredients_for_recipe(recipe_id)
@@ -664,14 +686,15 @@ def main():
         global ingredient_table_frame
         recipe_info_frame = Frame(view_recipe)
         ingredient_table_frame = Frame(view_recipe)
-        view_one_recipe_table(recipe_id)
+        view_one_recipe_table(recipe_info_frame, recipe_id)
         view_ingredient_table(recipe_id)
 
         add_ingredient_button_view_recipe = Button(view_recipe, text="Add \nIngredient",
                                                    command=lambda: add_ingredient_modal(recipe_id),
                                                    font='arial 16 bold', bg='red', fg='white', borderwidth=7,
                                                    cursor='hand2')
-        return_button_view_recipe = Button(view_recipe, text='Return \n to Recipes', command=home, font='arial 16 bold',
+        return_button_view_recipe = Button(view_recipe, text='Return \n to Recipes', command=lambda: home(view_recipe),
+                                           font='arial 16 bold',
                                            bg='dark green', fg='white', borderwidth=7, cursor='hand2')
 
         recipe_info_frame.grid(row=0, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
@@ -874,20 +897,24 @@ def main():
         add_recipe_button.grid(row=4, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
 
     # ENTRY :: ROOT
-    search_bar = Entry(root, text="Search by Recipe Name", width=30)
+    search_bar = Entry(root, width=30, font=main_font)
+    search_bar.insert(0, 'Search by Recipe Name')
 
     # BUTTONS :: ROOT
+    view_all_recipes_button = Button(root, text="View \nAll Recipes", command=lambda: home(root), font='arial 16 bold',
+                                     bg='dark green', fg='white', borderwidth=7, cursor='hand2')
     add_recipe_button = Button(root, text="Add \nRecipe", command=add_recipe_modal, font='arial 16 bold', bg='red',
                                fg='white', borderwidth=7, cursor='hand2')
-    search_bar_button = Button(root, text="Search", command=lambda : search_for_recipe_by_name(search_bar.get()))
+    search_bar_button = Button(root, text="Search", command=lambda: search_for_recipe_by_name(search_bar.get()))
 
     # POSITIONING :: ROOT
     div = Label(bg=main_bg, fg=main_bg)
-    div.grid(row=0,column=0, columnspan=5)
-    search_bar.grid(row=1, column=0, sticky='w', padx=25)
+    div.grid(row=0, column=0, columnspan=5)
+    search_bar.grid(row=1, column=0, sticky='w', padx=25, ipady=5, ipadx=5)
     search_bar_button.grid(row=2, column=0, columnspan=5, sticky='w', padx=25)
     recipe_table_frame.grid(row=3, column=0, columnspan=5, padx=(15, 50), pady=25)
-    add_recipe_button.grid(row=1, rowspan=4, column=7, columnspan=2, pady=25, ipadx=20, ipady=20, sticky='n')
+    view_all_recipes_button.grid(row=2, rowspan=2, column=7, columnspan=2, pady=25, ipadx=20, ipady=20)
+    add_recipe_button.grid(row=4, rowspan=2, column=7, columnspan=2, pady=25, ipadx=41, ipady=20, sticky='n')
 
     view_all_recipes_table()
     root.config(menu=menubar)
