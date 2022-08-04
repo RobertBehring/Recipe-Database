@@ -369,9 +369,9 @@ def main():
         ingredients = json.loads(ingredients)
         for i in range(1, len(ingredients)):
             name = ingredients[i]["ingredient"]
-            amount = ingredients[i]["qty"]
+            amount = round(ingredients[i]["qty"], 2)
             unit = ingredients[i]["measure"]
-            ingredient_id = ingredient_data[i-1][0]
+            ingredient_id = ingredient_data[i - 1][0]
             c.execute("""UPDATE ingredients SET
                  name = :name,
                  amount = :amount,
@@ -407,7 +407,8 @@ def main():
 
     # DELETE
     def delete_one_recipe(recipe_id):
-        if not tkinter.messagebox.askokcancel('Delete Warning', 'Deleting this entry is permanent.\nDo you want to continue?'):
+        if not tkinter.messagebox.askokcancel('Delete Warning',
+                                              'Deleting this entry is permanent.\nDo you want to continue?'):
             return
         conn = sqlite3.connect('recipes.db')
         c = conn.cursor()
@@ -421,7 +422,8 @@ def main():
 
     def delete_one_ingredient(recipe_id, ingredient_id):
         conn = sqlite3.connect('recipes.db')
-        if not tkinter.messagebox.askokcancel('Delete Warning', 'Deleting this entry is permanent.\nDo you want to continue?'):
+        if not tkinter.messagebox.askokcancel('Delete Warning',
+                                              'Deleting this entry is permanent.\nDo you want to continue?'):
             return
         c = conn.cursor()
         c.execute('DELETE FROM ingredients WHERE oid=' + str(ingredient_id))
@@ -431,6 +433,18 @@ def main():
         for widgets in ingredient_table_frame.winfo_children():
             widgets.destroy()
         view_ingredient_table(recipe_id)
+
+    def search_for_recipe_by_name(name):
+        conn = sqlite3.connect('recipes.db')
+        c = conn.cursor()
+        # c.execute()
+        # recipe = c.fetchall()
+        conn.commit()
+        conn.close()
+        # for widgets in recipe_table_frame.winfo_children():
+        #     widgets.destroy()
+        # view_all_recipes_table()
+        # return recipe
 
     # ########### FUNCTIONS ######################################################
     class RpcClient(object):
@@ -461,7 +475,7 @@ def main():
             self.corr_id = str(uuid.uuid4())
             self.channel.basic_publish(
                 exchange='',
-                routing_key='data2',
+                routing_key='data',
                 properties=pika.BasicProperties(
                     reply_to=self.callback_queue,
                     correlation_id=self.corr_id,
@@ -540,7 +554,6 @@ def main():
         rpc = RpcClient()
         data = rpc.call(conversion_request)
         update_many_ingredients_servings_conversion(recipe_id, data)
-
 
     # ########### RECIPE TABLES ##################################################
     def view_all_recipes_table():
@@ -705,10 +718,34 @@ def main():
         edit_recipe_button.grid(row=4, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
 
     def add_ingredient_modal(recipe_id):
+        def checkkey(event):
+            value = event.widget.get()
+            if value == '':
+                data = ingredients
+            else:
+                data = []
+                for item in ingredients:
+                    if value.lower() in item.lower():
+                        data.append(item)
+            update(data)
+
+        def update(data):
+            name_entry_listbox_add_ingredient.delete(0, 'end')
+            for item in data:
+                name_entry_listbox_add_ingredient.insert('end', item)
+
+        def items_selected(event):
+            # get selected indices
+            selected_indices = name_entry_listbox_add_ingredient.curselection()
+            # get selected items
+            selected_langs = ",".join([name_entry_listbox_add_ingredient.get(i) for i in selected_indices])
+            name_entry_add_ingredient.delete(0, 'end')
+            name_entry_add_ingredient.insert('end', selected_langs)
+
         global add_ingredient
         add_ingredient = Tk()
         add_ingredient.title('Add Ingredient')
-        add_ingredient.geometry('320x115')
+        add_ingredient.geometry('583x225')
         add_ingredient.iconbitmap(logo)
         add_ingredient.configure(bg=main_bg)
 
@@ -717,10 +754,10 @@ def main():
         global unit_entry_add_ingredient
         name_label_add_ingredient = Label(add_ingredient, text='Name', bg=main_bg)
         name_entry_add_ingredient = Entry(add_ingredient, width=30)
+        name_entry_listbox_add_ingredient = Listbox(add_ingredient, width=30)
         amount_label_add_ingredient = Label(add_ingredient, text='Amount', bg=main_bg)
         amount_entry_add_ingredient = Entry(add_ingredient, width=30)
         unit_label_add_ingredient = Label(add_ingredient, text='Unit of Measurement', bg=main_bg)
-        # unit_entry_add_ingredient = Entry(add_ingredient, width=30)
         unit_entry_add_ingredient = ttk.Combobox(add_ingredient, width=27)
         unit_entry_add_ingredient['values'] = units
 
@@ -728,19 +765,47 @@ def main():
                                        border=3, cursor='hand2')
 
         name_label_add_ingredient.grid(row=0, column=0, sticky='w', padx=5)
-        name_entry_add_ingredient.grid(row=0, column=1)
-        amount_label_add_ingredient.grid(row=1, column=0, sticky='w', padx=5)
-        amount_entry_add_ingredient.grid(row=1, column=1)
-        unit_label_add_ingredient.grid(row=2, column=0, sticky='w', padx=5)
-        unit_entry_add_ingredient.grid(row=2, column=1)
-        unit_entry_add_ingredient.current()
-        add_ingredient_button.grid(row=3, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
+        name_entry_add_ingredient.grid(row=1, column=0, padx=5)
+        name_entry_add_ingredient.bind('<KeyRelease>', checkkey)
+        name_entry_listbox_add_ingredient.grid(row=2, column=0, rowspan=3, padx=5)
+        name_entry_listbox_add_ingredient.bind('<<ListboxSelect>>', items_selected)
+        update(ingredients)
+        amount_label_add_ingredient.grid(row=0, column=1, sticky='w', padx=5)
+        amount_entry_add_ingredient.grid(row=1, column=1, padx=5)
+        unit_label_add_ingredient.grid(row=0, column=2, sticky='w', padx=5)
+        unit_entry_add_ingredient.grid(row=1, column=2, padx=5)
+        unit_entry_add_ingredient.current(0)
+        add_ingredient_button.grid(row=3, column=2, columnspan=2, padx=10, pady=10, ipadx=50, sticky='s')
 
     def edit_ingredient_modal(ingredient_id, recipe_id):
+        def checkkey(event):
+            value = event.widget.get()
+            if value == '':
+                data = ingredients
+            else:
+                data = []
+                for item in ingredients:
+                    if value.lower() in item.lower():
+                        data.append(item)
+            update(data)
+
+        def update(data):
+            name_entry_listbox_edit_ingredient.delete(0, 'end')
+            for item in data:
+                name_entry_listbox_edit_ingredient.insert('end', item)
+
+        def items_selected(event):
+            # get selected indices
+            selected_indices = name_entry_listbox_edit_ingredient.curselection()
+            # get selected items
+            selected_langs = ",".join([name_entry_listbox_edit_ingredient.get(i) for i in selected_indices])
+            name_entry_edit_ingredient.delete(0, 'end')
+            name_entry_edit_ingredient.insert('end', selected_langs)
+
         global edit_ingredient
         edit_ingredient = Tk()
         edit_ingredient.title('Add Ingredient')
-        edit_ingredient.geometry('320x115')
+        edit_ingredient.geometry('583x225')
         edit_ingredient.iconbitmap(logo)
         edit_ingredient.configure(bg=main_bg)
         ingredient_data = query_one_ingredient(ingredient_id)
@@ -751,6 +816,7 @@ def main():
         name_label_edit_ingredient = Label(edit_ingredient, text='Name', bg=main_bg)
         name_entry_edit_ingredient = Entry(edit_ingredient, width=30)
         name_entry_edit_ingredient.insert(0, ingredient_data[0][2])
+        name_entry_listbox_edit_ingredient = Listbox(edit_ingredient, width=30)
         amount_label_edit_ingredient = Label(edit_ingredient, text='Amount', bg=main_bg)
         amount_entry_edit_ingredient = Entry(edit_ingredient, width=30)
         amount_entry_edit_ingredient.insert(0, ingredient_data[0][3])
@@ -765,12 +831,16 @@ def main():
                                         border=3, cursor='hand2')
 
         name_label_edit_ingredient.grid(row=0, column=0, sticky='w', padx=5)
-        name_entry_edit_ingredient.grid(row=0, column=1)
-        amount_label_edit_ingredient.grid(row=1, column=0, sticky='w', padx=5)
-        amount_entry_edit_ingredient.grid(row=1, column=1)
-        unit_label_edit_ingredient.grid(row=2, column=0, sticky='w', padx=5)
-        unit_entry_edit_ingredient.grid(row=2, column=1)
-        edit_ingredient_button.grid(row=3, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
+        name_entry_edit_ingredient.grid(row=1, column=0, padx=5)
+        name_entry_edit_ingredient.bind('<KeyRelease>', checkkey)
+        name_entry_listbox_edit_ingredient.grid(row=2, column=0, rowspan=3, padx=5)
+        name_entry_listbox_edit_ingredient.bind('<<ListboxSelect>>', items_selected)
+        update(ingredients)
+        amount_label_edit_ingredient.grid(row=0, column=1, sticky='w', padx=5)
+        amount_entry_edit_ingredient.grid(row=1, column=1, padx=5)
+        unit_label_edit_ingredient.grid(row=0, column=2, sticky='w', padx=5)
+        unit_entry_edit_ingredient.grid(row=1, column=2, padx=5)
+        edit_ingredient_button.grid(row=3, column=2, columnspan=2, padx=10, pady=10, ipadx=50, sticky='s')
 
     def add_recipe_modal():
         global add_recipe
@@ -803,13 +873,21 @@ def main():
         date_entry_add_recipe.grid(row=3, column=0, columnspan=2, padx=10)
         add_recipe_button.grid(row=4, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
 
+    # ENTRY :: ROOT
+    search_bar = Entry(root, text="Search by Recipe Name", width=30)
+
     # BUTTONS :: ROOT
     add_recipe_button = Button(root, text="Add \nRecipe", command=add_recipe_modal, font='arial 16 bold', bg='red',
                                fg='white', borderwidth=7, cursor='hand2')
+    search_bar_button = Button(root, text="Search", command=lambda : search_for_recipe_by_name(search_bar.get()))
 
     # POSITIONING :: ROOT
-    recipe_table_frame.grid(row=0, column=2, columnspan=5, padx=(15, 50), pady=25)
-    add_recipe_button.grid(row=0, rowspan=2, column=7, columnspan=2, pady=25, ipadx=20, ipady=20, sticky='n')
+    div = Label(bg=main_bg, fg=main_bg)
+    div.grid(row=0,column=0, columnspan=5)
+    search_bar.grid(row=1, column=0, sticky='w', padx=25)
+    search_bar_button.grid(row=2, column=0, columnspan=5, sticky='w', padx=25)
+    recipe_table_frame.grid(row=3, column=0, columnspan=5, padx=(15, 50), pady=25)
+    add_recipe_button.grid(row=1, rowspan=4, column=7, columnspan=2, pady=25, ipadx=20, ipady=20, sticky='n')
 
     view_all_recipes_table()
     root.config(menu=menubar)
