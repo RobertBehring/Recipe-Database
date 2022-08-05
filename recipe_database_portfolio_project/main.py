@@ -31,7 +31,8 @@ def main():
                    'vanilla extract', 'vegetable oil', 'vegetable shortening', 'walnuts', 'water', 'instant yeast',
                    'yogurt', 'zucchini']
     logo = r'.\images\favicon.ico'
-    main_bg = 'white'
+    main_bg = '#edd8b2'
+    modal_bg= '#fff'
     main_size = '1540x1024'
     main_font = 'arial 10'
     main_font_underline = 'arial 10 underline'
@@ -47,25 +48,28 @@ def main():
     recipe_table_frame = Frame(root)
 
     # ############ MENUBAR #######################################################
-    menubar = Menu(root)
-    # Adding File Menu and commands
-    file = Menu(menubar, tearoff=0)
-    menubar.add_cascade(label='File', menu=file)
-    file.add_command(label='My Recipes', command=None)
-    file.add_command(label='History', command=None)
-    file.add_separator()
-    file.add_command(label='Exit', command=root.destroy)
-    # Adding Edit Menu and commands
-    edit = Menu(menubar, tearoff=0)
-    menubar.add_cascade(label='Edit', menu=edit)
-    edit.add_command(label='Save Recipe', command=None)
-    # Adding Help Menu
-    help_ = Menu(menubar, tearoff=0)
-    menubar.add_cascade(label='Help', menu=help_)
-    help_.add_command(label='Help Page', command=None)
-    help_.add_command(label='Tutorial', command=None)
-    help_.add_separator()
-    help_.add_command(label='About Recipe Ingredient Converter', command=None)
+    def menu(window):
+        global menubar
+        menubar = Menu(window)
+        # Adding File Menu and commands
+        file = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='File', menu=file)
+        file.add_command(label='My Recipes', command=None)
+        file.add_command(label='History', command=None)
+        file.add_separator()
+        file.add_command(label='Exit', command=window.destroy)
+        # Adding Edit Menu and commands
+        edit = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='Edit', menu=edit)
+        edit.add_command(label='Save Recipe', command=None)
+        # Adding Help Menu
+        help_ = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='Help', menu=help_)
+        help_.add_command(label='Help Page', command=None)
+        help_.add_command(label='Tutorial', command=None)
+        help_.add_separator()
+        help_.add_command(label='About Recipe Ingredient Converter', command=None)
+    menu(root)
 
     # CLOSE ALL WINDOWS, RERUN MAIN
     def home(window):
@@ -93,6 +97,15 @@ def main():
                 FOREIGN KEY (recipe_id) 
                 REFERENCES recipes(oid)  
                 ON DELETE CASCADE    
+    )""")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS logs (
+    recipe_id INTEGER,
+    log TEXT,
+    CONSTRAINT fk_recipes
+        FOREIGN KEY (recipe_id)
+        REFERENCES recipes(oid)
+        ON DELETE CASCADE
     )""")
 
     # CREATE
@@ -236,6 +249,17 @@ def main():
         c = conn.cursor()
 
         c.execute("SELECT oid, * FROM ingredients WHERE oid=" + str(ingredient_id))
+        data = c.fetchall()
+
+        conn.commit()
+        conn.close()
+        return data
+
+    def query_one_log(recipe_id):
+        conn = sqlite3.connect('recipes.db')
+        c = conn.cursor()
+
+        c.execute("SELECT log FROM logs WHERE oid=" + str(recipe_id))
         data = c.fetchall()
 
         conn.commit()
@@ -569,7 +593,7 @@ def main():
                 e = Entry(recipe_table_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
                 e.grid(row=i, column=j, ipadx=10, ipady=10)
                 e.insert(END, header[i][j])
-                e.config(state='disabled')
+                e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff', font='arial 14 bold')
         if recipes_data == []:
             no_recipes_label = Label(recipe_table_frame,
                                      text="There are no recipes in the database. \nAdd a recipe to continue",
@@ -579,10 +603,13 @@ def main():
         # recipes data
         for i in range(len(recipes_data)):
             for j in range(len(recipes_data[0])):
-                e = Entry(recipe_table_frame, width=20, font=main_font, border=2, cursor='arrow')
+                e = Entry(recipe_table_frame, width=24, font=main_font, border=2, cursor='arrow')
                 e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
                 e.insert(END, recipes_data[i][j])
-                e.config(state='disabled')
+                if i % 2 == 0:
+                    e.config(state='disabled', disabledbackground='#fff', disabledforeground='#000', font='arial 12')
+                else:
+                    e.config(state='disabled', disabledbackground='#ddd', disabledforeground='#000', font='arial 12')
             oid = recipes_data[i][0]
             name = recipes_data[i][1]
             view_button_add_recipe = Button(recipe_table_frame, text="View",
@@ -594,9 +621,9 @@ def main():
             delete_button_add_recipe = Button(recipe_table_frame, text="Delete",
                                               command=lambda oid=oid: delete_one_recipe(oid), fg='black',
                                               font=main_font_underline, borderwidth=5, cursor='hand2')
-            view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=75, ipady=3)
-            edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=75, ipady=3)
-            delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=75, ipady=3)
+            view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=95, ipady=3)
+            edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=95, ipady=3)
+            delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=95, ipady=3)
 
     def view_one_recipe_table(frame, recipe_id, edit=False):
         recipe_data = query_one_recipe(recipe_id)
@@ -610,14 +637,14 @@ def main():
                 e = Entry(frame, width=20, font=main_font_bold, border=2, cursor='arrow')
                 e.grid(row=i, column=j, ipadx=10, ipady=10)
                 e.insert(END, header[i][j])
-                e.config(state='disabled')
+                e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff')
         # recipe data
         for i in range(len(recipe_data)):
             for j in range(len(recipe_data[0])):
                 e = Entry(frame, width=20, font=main_font, border=2, cursor='arrow')
                 e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
                 e.insert(END, recipe_data[i][j])
-                e.config(state='disabled')
+                e.config(state='disabled', disabledforeground='black')
             oid = recipe_data[i][0]
             name = recipe_data[i][1]
             if edit:
@@ -642,7 +669,7 @@ def main():
                 e = Entry(ingredient_table_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
                 e.grid(row=i, column=j, ipadx=10, ipady=10)
                 e.insert(END, header[i][j])
-                e.config(state='disabled')
+                e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff')
         if recipe_data == []:
             no_ingredients_label = Label(ingredient_table_frame,
                                          text="There are no ingredients for this recipe. \nAdd an ingredient to continue",
@@ -655,7 +682,7 @@ def main():
                 e = Entry(ingredient_table_frame, width=20, font=main_font, border=2, cursor='arrow')
                 e.grid(row=i + 1, column=j - 2, ipadx=10, ipady=10)
                 e.insert(END, recipe_data[i][j])
-                e.config(state='disabled')
+                e.config(state='disabled', disabledforeground='black')
             ingredient_id = recipe_data[i][0]
             recipe_id = recipe_data[i][1]
             edit_button_ingredient_table_frame = Button(ingredient_table_frame, text="Edit",
@@ -669,10 +696,10 @@ def main():
                                                                          recipe_id=recipe_id: delete_one_ingredient(
                                                               recipe_id, ingredient_id), fg='black',
                                                           font=main_font_underline, borderwidth=5, cursor='hand2')
-            edit_button_ingredient_table_frame.grid(row=i + 1, column=j - 1, ipadx=75, ipady=3)
-            delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=75, ipady=3)
+            edit_button_ingredient_table_frame.grid(row=i + 1, column=j - 1, ipadx=60, ipady=3)
+            delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=55, ipady=3)
 
-    # ############ WINDOWS #######################################################
+    # ############ MAIN WINDOWS ##################################################
     def view_recipe_window(recipe_id, name):
         root.destroy()
         global view_recipe
@@ -688,21 +715,39 @@ def main():
         ingredient_table_frame = Frame(view_recipe)
         view_one_recipe_table(recipe_info_frame, recipe_id)
         view_ingredient_table(recipe_id)
+        log = query_one_log(recipe_id)
+        if log:
+            log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
+        else:
+            log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
+            log_field.insert('end', 'Type your recipe log here')
 
-        add_ingredient_button_view_recipe = Button(view_recipe, text="Add \nIngredient",
+        ingredient_table_label = ttk.Label(text="Ingredients", font='arial 24 underline')
+
+        add_ingredient_button_view_recipe = Button(view_recipe, text="Add Ingredient",
                                                    command=lambda: add_ingredient_modal(recipe_id),
-                                                   font='arial 16 bold', bg='red', fg='white', borderwidth=7,
+                                                   font='arial 12 bold', bg='red', fg='white', borderwidth=7,
                                                    cursor='hand2')
-        return_button_view_recipe = Button(view_recipe, text='Return \n to Recipes', command=lambda: home(view_recipe),
-                                           font='arial 16 bold',
+        return_button_view_recipe = Button(view_recipe, text='Return to Recipes', command=lambda: home(view_recipe),
+                                           font='arial 12 bold',
                                            bg='dark green', fg='white', borderwidth=7, cursor='hand2')
+        update_log_button_view_recipe = Button(view_recipe, text='Update Log', command=lambda: None,
+                                           font='arial 12 bold',
+                                           bg='red', fg='white', borderwidth=7, cursor='hand2')
 
-        recipe_info_frame.grid(row=0, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
-        return_button_view_recipe.grid(row=0, column=5, rowspan=2, columnspan=2, pady=25, ipadx=20, ipady=20,
-                                       sticky='n')
-        ingredient_table_frame.grid(row=1, column=0, columnspan=5, padx=(25, 50), pady=25, sticky='w')
-        add_ingredient_button_view_recipe.grid(row=1, column=5, rowspan=2, columnspan=2, pady=25, ipadx=27, ipady=20,
-                                               sticky='n')
+        return_button_view_recipe.grid(row=0, column=0, pady=25, sticky='w', padx=25)
+
+        recipe_info_frame.grid(row=1, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
+
+        ingredient_table_label.grid(row=2, column=0, sticky='w', padx=25)
+        add_ingredient_button_view_recipe.grid(row=3, column=5, sticky='nw', pady=25)
+        ingredient_table_frame.grid(row=3, column=0, columnspan=5, padx=25, pady=25, sticky='w')
+
+        log_field.grid(row=4, column=0, columnspan=6, padx=(25, 50), pady=25, sticky='w')
+        update_log_button_view_recipe.grid(row=5, column=0, padx=25, sticky='w')
+
+        menu(view_recipe)
+        view_recipe.config(menu=menubar)
 
     # ############ MODAL WINDOWS #################################################
     def edit_recipe_modal(recipe_id, name):
@@ -711,20 +756,20 @@ def main():
         edit_recipe.title('Editing: ' + name)
         edit_recipe.geometry(modal_size)
         edit_recipe.iconbitmap(logo)
-        edit_recipe.configure(bg=main_bg)
+        edit_recipe.configure(bg=modal_bg)
         recipe_data = query_one_recipe(recipe_id)
         date = recipe_data[0][3].split('/')
 
         global name_entry_edit_recipe
         global serving_size_entry_edit_recipe
         global date_entry_edit_recipe
-        name_label_edit_recipe = Label(edit_recipe, text='Name', bg=main_bg)
+        name_label_edit_recipe = Label(edit_recipe, text='Name', bg=modal_bg)
         name_entry_edit_recipe = Entry(edit_recipe, width=30)
         name_entry_edit_recipe.insert(0, recipe_data[0][1])
-        serving_size_label_edit_recipe = Label(edit_recipe, text='Serving Size', bg=main_bg)
+        serving_size_label_edit_recipe = Label(edit_recipe, text='Serving Size', bg=modal_bg)
         serving_size_entry_edit_recipe = Entry(edit_recipe, width=30)
         serving_size_entry_edit_recipe.insert(0, recipe_data[0][2])
-        date_label_edit_recipe = Label(edit_recipe, text='Date', bg=main_bg)
+        date_label_edit_recipe = Label(edit_recipe, text='Date', bg=modal_bg)
         date_entry_edit_recipe = Calendar(edit_recipe, selectmode='day',
                                           year=int(date[2]), month=int(date[0]),
                                           day=int(date[1]))
@@ -770,17 +815,17 @@ def main():
         add_ingredient.title('Add Ingredient')
         add_ingredient.geometry('583x225')
         add_ingredient.iconbitmap(logo)
-        add_ingredient.configure(bg=main_bg)
+        add_ingredient.configure(bg=modal_bg)
 
         global name_entry_add_ingredient
         global amount_entry_add_ingredient
         global unit_entry_add_ingredient
-        name_label_add_ingredient = Label(add_ingredient, text='Name', bg=main_bg)
+        name_label_add_ingredient = Label(add_ingredient, text='Name', bg=modal_bg)
         name_entry_add_ingredient = Entry(add_ingredient, width=30)
         name_entry_listbox_add_ingredient = Listbox(add_ingredient, width=30)
-        amount_label_add_ingredient = Label(add_ingredient, text='Amount', bg=main_bg)
+        amount_label_add_ingredient = Label(add_ingredient, text='Amount', bg=modal_bg)
         amount_entry_add_ingredient = Entry(add_ingredient, width=30)
-        unit_label_add_ingredient = Label(add_ingredient, text='Unit of Measurement', bg=main_bg)
+        unit_label_add_ingredient = Label(add_ingredient, text='Unit of Measurement', bg=modal_bg)
         unit_entry_add_ingredient = ttk.Combobox(add_ingredient, width=27)
         unit_entry_add_ingredient['values'] = units
 
@@ -830,20 +875,20 @@ def main():
         edit_ingredient.title('Add Ingredient')
         edit_ingredient.geometry('583x225')
         edit_ingredient.iconbitmap(logo)
-        edit_ingredient.configure(bg=main_bg)
+        edit_ingredient.configure(bg=modal_bg)
         ingredient_data = query_one_ingredient(ingredient_id)
 
         global name_entry_edit_ingredient
         global amount_entry_edit_ingredient
         global unit_entry_edit_ingredient
-        name_label_edit_ingredient = Label(edit_ingredient, text='Name', bg=main_bg)
+        name_label_edit_ingredient = Label(edit_ingredient, text='Name', bg=modal_bg)
         name_entry_edit_ingredient = Entry(edit_ingredient, width=30)
         name_entry_edit_ingredient.insert(0, ingredient_data[0][2])
         name_entry_listbox_edit_ingredient = Listbox(edit_ingredient, width=30)
-        amount_label_edit_ingredient = Label(edit_ingredient, text='Amount', bg=main_bg)
+        amount_label_edit_ingredient = Label(edit_ingredient, text='Amount', bg=modal_bg)
         amount_entry_edit_ingredient = Entry(edit_ingredient, width=30)
         amount_entry_edit_ingredient.insert(0, ingredient_data[0][3])
-        unit_label_edit_ingredient = Label(edit_ingredient, text='Unit of Measurement', bg=main_bg)
+        unit_label_edit_ingredient = Label(edit_ingredient, text='Unit of Measurement', bg=modal_bg)
         unit_entry_edit_ingredient = ttk.Combobox(edit_ingredient, width=27)
         unit_entry_edit_ingredient['values'] = units
         unit_index = units.index(ingredient_data[0][4])
@@ -871,17 +916,17 @@ def main():
         add_recipe.title('Add a Recipe')
         add_recipe.geometry(modal_size)
         add_recipe.iconbitmap(logo)
-        add_recipe.configure(bg=main_bg)
+        add_recipe.configure(bg=modal_bg)
         year, month, day = today.strftime('%y'), today.strftime('%m'), today.strftime('%d')
 
         global name_entry_add_recipe
         global serving_size_entry_add_recipe
         global date_entry_add_recipe
-        name_label_add_recipe = Label(add_recipe, text='Name', bg=main_bg)
+        name_label_add_recipe = Label(add_recipe, text='Name', bg=modal_bg)
         name_entry_add_recipe = Entry(add_recipe, width=30)
-        serving_size_label_add_recipe = Label(add_recipe, text='Serving Size', bg=main_bg)
+        serving_size_label_add_recipe = Label(add_recipe, text='Serving Size', bg=modal_bg)
         serving_size_entry_add_recipe = Entry(add_recipe, width=30)
-        date_label_add_recipe = Label(add_recipe, text='Date', bg=main_bg)
+        date_label_add_recipe = Label(add_recipe, text='Date', bg=modal_bg)
         date_entry_add_recipe = Calendar(add_recipe, selectmode='day',
                                          year=int(year), month=int(month),
                                          day=int(day))
@@ -901,20 +946,22 @@ def main():
     search_bar.insert(0, 'Search by Recipe Name')
 
     # BUTTONS :: ROOT
-    view_all_recipes_button = Button(root, text="View \nAll Recipes", command=lambda: home(root), font='arial 16 bold',
+    view_all_recipes_button = Button(root, text="View All Recipes", command=lambda: home(root), font='arial 12 bold',
                                      bg='dark green', fg='white', borderwidth=7, cursor='hand2')
-    add_recipe_button = Button(root, text="Add \nRecipe", command=add_recipe_modal, font='arial 16 bold', bg='red',
+    add_recipe_button = Button(root, text="Add Recipe", command=add_recipe_modal, font='arial 12 bold', bg='red',
                                fg='white', borderwidth=7, cursor='hand2')
     search_bar_button = Button(root, text="Search", command=lambda: search_for_recipe_by_name(search_bar.get()))
 
     # POSITIONING :: ROOT
-    div = Label(bg=main_bg, fg=main_bg)
-    div.grid(row=0, column=0, columnspan=5)
+    # div = Label(bg=main_bg, fg=main_bg)
+    # div.grid(row=0, column=0, columnspan=5)
+    view_all_recipes_button.grid(row=0, column=0, pady=25, padx=25, sticky='w')
+    add_recipe_button.grid(row=1, column=6, rowspan=2, sticky='se', padx=50)
+
     search_bar.grid(row=1, column=0, sticky='w', padx=25, ipady=5, ipadx=5)
-    search_bar_button.grid(row=2, column=0, columnspan=5, sticky='w', padx=25)
-    recipe_table_frame.grid(row=3, column=0, columnspan=5, padx=(15, 50), pady=25)
-    view_all_recipes_button.grid(row=2, rowspan=2, column=7, columnspan=2, pady=25, ipadx=20, ipady=20)
-    add_recipe_button.grid(row=4, rowspan=2, column=7, columnspan=2, pady=25, ipadx=41, ipady=20, sticky='n')
+    search_bar_button.grid(row=2, column=0, sticky='w', padx=25)
+
+    recipe_table_frame.grid(row=3, column=0, columnspan=7, padx=(15, 50), pady=25)
 
     view_all_recipes_table()
     root.config(menu=menubar)
