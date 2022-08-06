@@ -32,7 +32,7 @@ def main():
                    'yogurt', 'zucchini']
     logo = r'.\images\favicon.ico'
     main_bg = '#edd8b2'
-    modal_bg= '#fff'
+    modal_bg = '#fff'
     main_size = '1540x1024'
     main_font = 'arial 10'
     main_font_underline = 'arial 10 underline'
@@ -69,6 +69,7 @@ def main():
         help_.add_command(label='Tutorial', command=None)
         help_.add_separator()
         help_.add_command(label='About Recipe Ingredient Converter', command=None)
+
     menu(root)
 
     # CLOSE ALL WINDOWS, RERUN MAIN
@@ -259,7 +260,7 @@ def main():
         conn = sqlite3.connect('recipes.db')
         c = conn.cursor()
 
-        c.execute("SELECT log FROM logs WHERE oid=" + str(recipe_id))
+        c.execute("SELECT oid, log FROM logs WHERE recipe_id=" + str(recipe_id))
         data = c.fetchall()
 
         conn.commit()
@@ -428,6 +429,31 @@ def main():
         for widgets in recipe_table_frame.winfo_children():
             widgets.destroy()
         view_all_recipes_table()
+
+    def insert_update_log(recipe_id):
+        conn = sqlite3.connect('recipes.db')
+        c = conn.cursor()
+        log_check = query_one_log(recipe_id)
+        log = log_field.get('1.0', 'end')
+        if log_check:
+            # update
+            log_id = log_check[0][0]
+            c.execute("""UPDATE logs SET 
+                 log = :log
+                 WHERE oid = :oid""",
+                      {
+                          "log": log,
+                          "oid": log_id
+                      })
+        else:
+            # insert
+            c.execute("INSERT INTO logs VALUES (:recipe_id, :log)",
+                      {
+                          'recipe_id': recipe_id,
+                          'log': log
+                      })
+        conn.commit()
+        conn.close()
 
     # DELETE
     def delete_one_recipe(recipe_id):
@@ -716,13 +742,15 @@ def main():
         view_one_recipe_table(recipe_info_frame, recipe_id)
         view_ingredient_table(recipe_id)
         log = query_one_log(recipe_id)
+        global log_field
         if log:
             log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
+            log_field.insert('end', log[0][1])
         else:
             log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
             log_field.insert('end', 'Type your recipe log here')
 
-        ingredient_table_label = ttk.Label(text="Ingredients", font='arial 24 underline')
+        ingredient_table_label = ttk.Label(text="Ingredients", font='arial 24 underline', background=main_bg)
 
         add_ingredient_button_view_recipe = Button(view_recipe, text="Add Ingredient",
                                                    command=lambda: add_ingredient_modal(recipe_id),
@@ -731,9 +759,10 @@ def main():
         return_button_view_recipe = Button(view_recipe, text='Return to Recipes', command=lambda: home(view_recipe),
                                            font='arial 12 bold',
                                            bg='dark green', fg='white', borderwidth=7, cursor='hand2')
-        update_log_button_view_recipe = Button(view_recipe, text='Update Log', command=lambda: None,
-                                           font='arial 12 bold',
-                                           bg='red', fg='white', borderwidth=7, cursor='hand2')
+        update_log_button_view_recipe = Button(view_recipe, text='Update Log',
+                                               command=lambda: insert_update_log(recipe_id),
+                                               font='arial 12 bold',
+                                               bg='red', fg='white', borderwidth=7, cursor='hand2')
 
         return_button_view_recipe.grid(row=0, column=0, pady=25, sticky='w', padx=25)
 
