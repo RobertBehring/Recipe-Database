@@ -949,9 +949,12 @@ def main():
         global help_window
         help_window = Toplevel()
         help_window.title('Help')
-        help_window.geometry('875x425')
+        help_window.geometry('875x825')
         help_window.iconbitmap(logo)
         help_window.configure(bg='light grey')
+        help_font = 'arial 10'
+        help_font_bold = 'arial 10 bold'
+        help_title_font = 'arial 20 bold'
 
         # create a notebook
         notebook = ttk.Notebook(help_window)
@@ -959,54 +962,94 @@ def main():
 
         # create frames
         about_help = ttk.Frame(notebook, width=400, height=280)
-        about_title = Label(about_help, justify='left', font='arial 20 bold', text='About the Recipe Database Program')
-        about_text = Label(about_help, justify='left', wraplength=750,
+        about_title = Label(about_help, justify='left', font=help_title_font, text='About the Recipe Database Program')
+        about_text = Label(about_help, justify='left', wraplength=750, font=help_font,
                            text="   This Recipe Database program allows users to keep a log of their own collection of recipes. Users will be able to perform all CRUD functions on recipes and ingredients. Users will also be able to convert their recipes to different amounts of servings and different units of measurement as needed.")
         about_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
         about_text.grid(row=1, column=0, sticky='w', padx=10)
 
         add_recipe_help = ttk.Frame(notebook, width=400, height=280)
-        add_recipe_title = Label(add_recipe_help, justify='left', font='arial 20 bold', text='How to Add a Recipe')
-        add_recipe_text1 = Label(add_recipe_help, justify='left', wraplength=750, text='')
-        global add_recipe_img
-        add_recipe_img = ImageTk.PhotoImage(Image.open("./images/add_recipe_button.png"))
-        add_recipe_help_label = ttk.Label(add_recipe_help, image=add_recipe_img)
-
+        add_recipe_title = Label(add_recipe_help, justify='left', font=help_title_font, text='How to Add a Recipe')
+        add_recipe_text1 = Label(add_recipe_help, justify='left', wraplength=750, font=help_font,
+                                 text='1. To add a recipe to the database first click on the "Add Recipe" Button located near the top right corner of the screen.')
+        global add_recipe_img1
+        add_recipe_img1 = ImageTk.PhotoImage(Image.open("./images/add_recipe_button.png"))
+        add_recipe_help_label = ttk.Label(add_recipe_help, image=add_recipe_img1)
+        add_recipe_text2 = Label(add_recipe_help, justify='left', wraplength=750, font=help_font,
+                                 text='2. The add recipe modal window will popup and you can enter your respective recipe information.')
+        add_recipe_text3 = Label(add_recipe_help, wraplength=750, font=help_font_bold,
+                                 text='Note: Servings must be entered in a decimal format, forward slashes "/" are not allowed.')
+        global add_recipe_img2
+        add_recipe_img2 = ImageTk.PhotoImage(Image.open("./images/add_recipe_modal.png"))
+        add_recipe_img2_label = ttk.Label(add_recipe_help, image=add_recipe_img2)
+        add_recipe_text4 = Label(add_recipe_help, justify='left', wraplength=750, font=help_font,
+                                 text='3. Finally click the "Add" button and you have now successfully added a recipe to the database!')
         add_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
-        add_recipe_help_label.grid(row=10, column=0)
+        add_recipe_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
+        add_recipe_help_label.grid(row=2, column=0)
+        add_recipe_text2.grid(row=3, column=0, sticky='w', padx=10, pady=10)
+        add_recipe_img2_label.grid(row=5, column=0)
+        add_recipe_text3.grid(row=6, column=0, padx=10, pady=10)
+        add_recipe_text4.grid(row=7, column=0, sticky='w', padx=10, pady=10)
 
         edit_recipe_help = ttk.Frame(notebook, width=400, height=280)
-        edit_recipe_title = Label(edit_recipe_help, justify='left', font='arial 20 bold', text='How to Edit a Recipe')
+        edit_recipe_title = Label(edit_recipe_help, justify='left', font=help_title_font, text='How to Edit a Recipe')
+        edit_recipe_text1 = Label(edit_recipe_help, justify='left', wraplength=750, font=help_font,
+                                 text='1. While on the main recipes page, click on the edit button located in the "Edit" column of the recipes table.')
+        global edit_recipe_img1
+        edit_recipe_img1 = ImageTk.PhotoImage(Image.open("./images/edit_recipe_button.png"))
+        edit_recipe_img1_label = ttk.Label(edit_recipe_help, image=edit_recipe_img1)
+        edit_recipe_text2 = Label(edit_recipe_help, justify='left', wraplength=750, font=help_font,
+                                 text='2. The edit recipe modal window will popup and you can enter your respective recipe information.')
+        global edit_recipe_img2
+        edit_recipe_img2 = ImageTk.PhotoImage(Image.open("./images/edit_recipe_modal.png"))
+        edit_recipe_img2_label = ttk.Label(edit_recipe_help, image=edit_recipe_img2)
+        edit_recipe_text3 = Label(edit_recipe_help, wraplength=750, font=help_font_bold,
+                                 text='Note: Servings must be entered in a decimal format, forward slashes "/" are not allowed.')
+        edit_recipe_text4 = Label(edit_recipe_help, justify='left', wraplength=750, font=help_font,
+                                 text='3. Finally click the "Confirm" button and you have now successfully edit a recipe in your database!')
+
         edit_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        edit_recipe_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
+        edit_recipe_img1_label.grid(row=2, column=0)
+        edit_recipe_text2.grid(row=3, column=0, sticky='w', padx=10, pady=10)
+        edit_recipe_img2_label.grid(row=4, column=0)
+        edit_recipe_text3.grid(row=5, column=0, padx=10, pady=10)
+        edit_recipe_text4.grid(row=6, column=0, sticky='w', padx=10, pady=10)
 
         delete_recipe_help = ttk.Frame(notebook, width=400, height=280)
-        delete_recipe_title = Label(delete_recipe_help, justify='left', font='arial 20 bold', text='How to Delete a Recipe')
+        delete_recipe_title = Label(delete_recipe_help, justify='left', font=help_title_font,
+                                    text='How to Delete a Recipe')
         delete_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
-
-
         add_ingredient_help = ttk.Frame(notebook, width=400, height=280)
-        add_ingredient_title = Label(add_ingredient_help, justify='left', font='arial 20 bold', text='How to Add an Ingredient from a Recipe')
+        add_ingredient_title = Label(add_ingredient_help, justify='left', font=help_title_font,
+                                     text='How to Add an Ingredient from a Recipe')
         add_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
         edit_ingredient_help = ttk.Frame(notebook, width=400, height=280)
-        edit_ingredient_title = Label(edit_ingredient_help, justify='left', font='arial 20 bold', text='How to Edit an Ingredient from a Recipe')
+        edit_ingredient_title = Label(edit_ingredient_help, justify='left', font=help_title_font,
+                                      text='How to Edit an Ingredient from a Recipe')
         edit_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
         delete_ingredient_help = ttk.Frame(notebook, width=400, height=280)
-        delete_ingredient_title = Label(delete_ingredient_help, justify='left', font='arial 20 bold', text='How to Delete an Ingredient from a Recipe')
+        delete_ingredient_title = Label(delete_ingredient_help, justify='left', font=help_title_font,
+                                        text='How to Delete an Ingredient from a Recipe')
         delete_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
         servings_change_help = ttk.Frame(notebook, width=400, height=280)
-        servings_change_title = Label(servings_change_help, justify='left', font='arial 20 bold', text='Understanding Servings Conversions')
+        servings_change_title = Label(servings_change_help, justify='left', font=help_title_font,
+                                      text='Understanding Servings Conversions')
         servings_change_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
         unit_change_help = ttk.Frame(notebook, width=400, height=280)
-        unit_change_title = Label(unit_change_help, justify='left', font='arial 20 bold', text='Understanding Unit Conversions')
+        unit_change_title = Label(unit_change_help, justify='left', font=help_title_font,
+                                  text='Understanding Unit Conversions')
         unit_change_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
         search_help = ttk.Frame(notebook, width=400, height=280)
-        search_title = Label(search_help, justify='left', font='arial 20 bold', text='How to Search for a Recipe in the Database')
+        search_title = Label(search_help, justify='left', font=help_title_font,
+                             text='How to Search for a Recipe in the Database')
         search_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
 
         # pack frames
