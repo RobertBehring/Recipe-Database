@@ -35,6 +35,9 @@ main_font = 'arial 10'
 main_font_underline = 'arial 10 underline'
 main_font_bold = 'arial 10 bold'
 modal_size = '270x300'
+help_font = 'arial 10'
+help_font_bold = 'arial 10 bold'
+help_title_font = 'arial 20 bold'
 today = date.today()
 
 
@@ -103,9 +106,6 @@ def help_modal():
     help_window.geometry('1300x1100')
     help_window.iconbitmap(logo)
     help_window.configure(bg='light grey')
-    help_font = 'arial 10'
-    help_font_bold = 'arial 10 bold'
-    help_title_font = 'arial 20 bold'
 
     # create a notebook
     notebook = ttk.Notebook(help_window)
@@ -892,7 +892,6 @@ def rpc_servings_conversion(recipe_data, serving_change):
     update_many_ingredients_servings_conversion(recipe_id, data)
 
 
-# ########### RECIPE TABLES ##################################################
 def view_all_recipes_table(recipes_data=None):
     if recipes_data is None:
         recipes_data = query_all_recipes()
@@ -1013,61 +1012,6 @@ def view_ingredient_table(recipe_id):
         delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=55, ipady=3)
 
 
-# ############ MAIN WINDOWS ##################################################
-def view_recipe_window(recipe_id, name):
-    root.destroy()
-    global view_recipe
-    view_recipe = Tk()
-    view_recipe.title(f'Viewing Recipe: {name}')
-    view_recipe.geometry(main_size)
-    view_recipe.iconbitmap(logo)
-    view_recipe.configure(bg=main_bg)
-    view_recipe.state('zoomed')
-    global recipe_info_frame
-    global ingredient_table_frame
-    recipe_info_frame = Frame(view_recipe)
-    ingredient_table_frame = Frame(view_recipe)
-    view_one_recipe_table(recipe_info_frame, recipe_id)
-    view_ingredient_table(recipe_id)
-    log = query_one_log(recipe_id)
-    global log_field
-    if log:
-        log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
-        log_field.insert('end', log[0][1])
-    else:
-        log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
-        log_field.insert('end', 'Type your recipe log here')
-
-    ingredient_table_label = ttk.Label(text="Ingredients", font='arial 24 underline', background=main_bg)
-
-    add_ingredient_button_view_recipe = Button(view_recipe, text="Add Ingredient",
-                                               command=lambda: add_ingredient_modal(recipe_id),
-                                               font='arial 12 bold', bg='red', fg='white', borderwidth=7,
-                                               cursor='hand2')
-    return_button_view_recipe = Button(view_recipe, text='Return to Recipes', command=lambda: home(view_recipe),
-                                       font='arial 12 bold',
-                                       bg='dark green', fg='white', borderwidth=7, cursor='hand2')
-    update_log_button_view_recipe = Button(view_recipe, text='Update Log',
-                                           command=lambda: insert_update_log(recipe_id),
-                                           font='arial 12 bold',
-                                           bg='red', fg='white', borderwidth=7, cursor='hand2')
-
-    return_button_view_recipe.grid(row=0, column=0, pady=25, sticky='w', padx=25)
-
-    recipe_info_frame.grid(row=1, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
-
-    ingredient_table_label.grid(row=2, column=0, sticky='w', padx=25)
-    add_ingredient_button_view_recipe.grid(row=3, column=5, sticky='nw', pady=25)
-    ingredient_table_frame.grid(row=3, column=0, columnspan=5, padx=25, pady=25, sticky='w')
-
-    log_field.grid(row=4, column=0, columnspan=6, padx=(25, 50), pady=25, sticky='w')
-    update_log_button_view_recipe.grid(row=5, column=0, padx=25, sticky='w')
-
-    menu(view_recipe)
-    view_recipe.config(menu=menubar)
-
-
-# ############ MODAL WINDOWS #################################################
 def edit_recipe_modal(recipe_id, name):
     global edit_recipe
     edit_recipe = Tk()
@@ -1302,6 +1246,59 @@ def main():
     recipe_table_frame.grid(row=3, column=0, columnspan=7, padx=(15, 50), pady=25)
 
     root.mainloop()
+
+
+def view_recipe_window(recipe_id, name):
+    root.destroy()
+    global view_recipe
+    view_recipe = Tk()
+    view_recipe.title(f'Viewing Recipe: {name}')
+    view_recipe.geometry(main_size)
+    view_recipe.iconbitmap(logo)
+    view_recipe.configure(bg=main_bg)
+    view_recipe.state('zoomed')
+    global recipe_info_frame
+    global ingredient_table_frame
+    recipe_info_frame = Frame(view_recipe)
+    ingredient_table_frame = Frame(view_recipe)
+    view_one_recipe_table(recipe_info_frame, recipe_id)
+    view_ingredient_table(recipe_id)
+    log = query_one_log(recipe_id)
+    global log_field
+    if log:
+        log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
+        log_field.insert('end', log[0][1])
+    else:
+        log_field = Text(font='arial 12', width=91, height=25, relief='sunken', border=5)
+        log_field.insert('end', 'Type your recipe log here')
+
+    ingredient_table_label = ttk.Label(text="Ingredients", font='arial 24 underline', background=main_bg)
+
+    add_ingredient_button_view_recipe = Button(view_recipe, text="Add Ingredient",
+                                               command=lambda: add_ingredient_modal(recipe_id),
+                                               font='arial 12 bold', bg='red', fg='white', borderwidth=7,
+                                               cursor='hand2')
+    return_button_view_recipe = Button(view_recipe, text='Return to Recipes', command=lambda: home(view_recipe),
+                                       font='arial 12 bold',
+                                       bg='dark green', fg='white', borderwidth=7, cursor='hand2')
+    update_log_button_view_recipe = Button(view_recipe, text='Update Log',
+                                           command=lambda: insert_update_log(recipe_id),
+                                           font='arial 12 bold',
+                                           bg='red', fg='white', borderwidth=7, cursor='hand2')
+
+    return_button_view_recipe.grid(row=0, column=0, pady=25, sticky='w', padx=25)
+
+    recipe_info_frame.grid(row=1, column=0, columnspan=4, padx=(25, 50), pady=25, sticky='w')
+
+    ingredient_table_label.grid(row=2, column=0, sticky='w', padx=25)
+    add_ingredient_button_view_recipe.grid(row=3, column=5, sticky='nw', pady=25)
+    ingredient_table_frame.grid(row=3, column=0, columnspan=5, padx=25, pady=25, sticky='w')
+
+    log_field.grid(row=4, column=0, columnspan=6, padx=(25, 50), pady=25, sticky='w')
+    update_log_button_view_recipe.grid(row=5, column=0, padx=25, sticky='w')
+
+    menu(view_recipe)
+    view_recipe.config(menu=menubar)
 
 
 if __name__ == '__main__':
