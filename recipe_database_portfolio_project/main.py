@@ -1,6 +1,6 @@
 import tkinter.messagebox
 from tkinter import *
-from tkinter.tix import *
+# from tkinter.tix import *
 from tkinter import ttk
 from tkcalendar import Calendar
 from datetime import date
