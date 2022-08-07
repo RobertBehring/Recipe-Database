@@ -876,7 +876,7 @@ def main():
 
         global edit_ingredient
         edit_ingredient = Tk()
-        edit_ingredient.title('Add Ingredient')
+        edit_ingredient.title('Edit Ingredient')
         edit_ingredient.geometry('583x225')
         edit_ingredient.iconbitmap(logo)
         edit_ingredient.configure(bg=modal_bg)
@@ -949,7 +949,7 @@ def main():
         global help_window
         help_window = Toplevel()
         help_window.title('Help')
-        help_window.geometry('875x825')
+        help_window.geometry('900x1000')
         help_window.iconbitmap(logo)
         help_window.configure(bg='light grey')
         help_font = 'arial 10'
@@ -995,20 +995,19 @@ def main():
         edit_recipe_help = ttk.Frame(notebook, width=400, height=280)
         edit_recipe_title = Label(edit_recipe_help, justify='left', font=help_title_font, text='How to Edit a Recipe')
         edit_recipe_text1 = Label(edit_recipe_help, justify='left', wraplength=750, font=help_font,
-                                 text='1. While on the main recipes page, click on the edit button located in the "Edit" column of the recipes table.')
+                                  text='1. While on the main recipes page, click on the edit button located in the "Edit" column of the recipes table.')
         global edit_recipe_img1
         edit_recipe_img1 = ImageTk.PhotoImage(Image.open("./images/edit_recipe_button.png"))
         edit_recipe_img1_label = ttk.Label(edit_recipe_help, image=edit_recipe_img1)
         edit_recipe_text2 = Label(edit_recipe_help, justify='left', wraplength=750, font=help_font,
-                                 text='2. The edit recipe modal window will popup and you can enter your respective recipe information.')
+                                  text='2. The edit recipe modal window will popup and you can enter your respective recipe information.')
         global edit_recipe_img2
         edit_recipe_img2 = ImageTk.PhotoImage(Image.open("./images/edit_recipe_modal.png"))
         edit_recipe_img2_label = ttk.Label(edit_recipe_help, image=edit_recipe_img2)
         edit_recipe_text3 = Label(edit_recipe_help, wraplength=750, font=help_font_bold,
-                                 text='Note: Servings must be entered in a decimal format, forward slashes "/" are not allowed.')
+                                  text='Note: Servings must be entered in a decimal format, forward slashes "/" are not allowed.')
         edit_recipe_text4 = Label(edit_recipe_help, justify='left', wraplength=750, font=help_font,
-                                 text='3. Finally click the "Confirm" button and you have now successfully edit a recipe in your database!')
-
+                                  text='3. Finally click the "Confirm" button and you have now successfully edit a recipe in your database!')
         edit_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
         edit_recipe_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
         edit_recipe_img1_label.grid(row=2, column=0)
@@ -1020,12 +1019,57 @@ def main():
         delete_recipe_help = ttk.Frame(notebook, width=400, height=280)
         delete_recipe_title = Label(delete_recipe_help, justify='left', font=help_title_font,
                                     text='How to Delete a Recipe')
+        delete_recipe_text1 = Label(delete_recipe_help, justify='left', wraplength=750, font=help_font,
+                                    text='1. While on the main recipes page, click on the delete button located in the "Delete" column of the recipes table.')
+        global delete_recipe_img1
+        delete_recipe_img1 = ImageTk.PhotoImage(Image.open("./images/delete_recipe_button.png"))
+        delete_recipe_img1_label = ttk.Label(delete_recipe_help, image=delete_recipe_img1)
+        delete_recipe_text2 = Label(delete_recipe_help, justify='left', wraplength=750, font=help_font,
+                                    text='2. A confirmation popup will appear, click OK to continue or Cancel to return')
+        global delete_recipe_img2
+        delete_recipe_img2 = ImageTk.PhotoImage(Image.open("./images/delete_recipe_popup.png"))
+        delete_recipe_img2_label = ttk.Label(delete_recipe_help, image=delete_recipe_img2)
         delete_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        delete_recipe_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
+        delete_recipe_img1_label.grid(row=2, column=0)
+        delete_recipe_text2.grid(row=3, column=0, sticky='w', padx=10, pady=10)
+        delete_recipe_img2_label.grid(row=4, column=0)
 
         add_ingredient_help = ttk.Frame(notebook, width=400, height=280)
         add_ingredient_title = Label(add_ingredient_help, justify='left', font=help_title_font,
-                                     text='How to Add an Ingredient from a Recipe')
+                                     text='How to Add an Ingredient to a Recipe')
+        add_ingredient_text1 = Label(add_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                     text='1. While on the main recipes page, click on the view button located in the "View" column of the recipes table corresponding to the recipe you want to add an ingredient to.')
+        global add_ingredient_img1
+        add_ingredient_img1 = ImageTk.PhotoImage(Image.open("./images/view_recipe_button.png"))
+        add_ingredient_img1_label = ttk.Label(add_ingredient_help, image=add_ingredient_img1)
+        add_ingredient_text2 = Label(add_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                     text="2. This will take you to your chosen recipe's information page")
+        add_ingredient_text3 = Label(add_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                     text='\tFrom this page, click on the "Add Ingredient" button located at the top right corner of your ingredients table')
+        global add_ingredient_img2
+        add_ingredient_img2 = ImageTk.PhotoImage(Image.open("./images/add_ingredient_button.png"))
+        add_ingredient_img2_label = ttk.Label(add_ingredient_help, image=add_ingredient_img2)
+        add_ingredient_text4 = Label(add_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                     text="3. The Add Ingredient modal window will popup and you will be prompted to enter the respective ingredient's information")
+        global add_ingredient_img3
+        add_ingredient_img3 = ImageTk.PhotoImage(Image.open("./images/add_ingredient_modal.png"))
+        add_ingredient_img3_label = ttk.Label(add_ingredient_help, image=add_ingredient_img3)
+        add_ingredient_text5 = Label(add_ingredient_help, wraplength=750, font=help_font_bold,
+                                  text='Note: Ingredient names must match those in the list field below. \nAmount must be entered in decimal format, forward slashes "/" are not allowed.')
+        add_ingredient_text6 = Label(add_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                 text='3. Finally click the "Add" button and you have now successfully added an ingredient to your recipe!')
+
         add_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        add_ingredient_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
+        add_ingredient_img1_label.grid(row=2, column=0)
+        add_ingredient_text2.grid(row=3, column=0, sticky='w', padx=10, pady=10)
+        add_ingredient_text3.grid(row=4, column=0, sticky='w', padx=10, pady=10)
+        add_ingredient_img2_label.grid(row=5, column=0)
+        add_ingredient_text4.grid(row=6, column=0, sticky='w', padx=10, pady=10)
+        add_ingredient_img3_label.grid(row=7, column=0)
+        add_ingredient_text5.grid(row=8, column=0, padx=10, pady=10)
+        add_ingredient_text6.grid(row=9, column=0, sticky='w', padx=10, pady=10)
 
         edit_ingredient_help = ttk.Frame(notebook, width=400, height=280)
         edit_ingredient_title = Label(edit_ingredient_help, justify='left', font=help_title_font,
