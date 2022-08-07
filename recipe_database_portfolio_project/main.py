@@ -2,9 +2,9 @@ import tkinter.messagebox
 from tkinter import *
 from tkinter.tix import *
 from tkinter import ttk
-from tkinter import messagebox
 from tkcalendar import Calendar
 from datetime import date
+from PIL import ImageTk, Image
 import sqlite3
 import json
 import pika
@@ -46,31 +46,6 @@ def main():
     root.state('zoomed')
     today = date.today()
     recipe_table_frame = Frame(root)
-
-    # ############ MENUBAR #######################################################
-    def menu(window):
-        global menubar
-        menubar = Menu(window)
-        # Adding File Menu and commands
-        file = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label='File', menu=file)
-        file.add_command(label='My Recipes', command=None)
-        file.add_command(label='History', command=None)
-        file.add_separator()
-        file.add_command(label='Exit', command=window.destroy)
-        # Adding Edit Menu and commands
-        edit = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label='Edit', menu=edit)
-        edit.add_command(label='Save Recipe', command=None)
-        # Adding Help Menu
-        help_ = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label='Help', menu=help_)
-        help_.add_command(label='Help Page', command=None)
-        help_.add_command(label='Tutorial', command=None)
-        help_.add_separator()
-        help_.add_command(label='About Recipe Ingredient Converter', command=None)
-
-    menu(root)
 
     # CLOSE ALL WINDOWS, RERUN MAIN
     def home(window):
@@ -970,6 +945,94 @@ def main():
         date_entry_add_recipe.grid(row=3, column=0, columnspan=2, padx=10)
         add_recipe_button.grid(row=4, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
 
+    def help_modal():
+        global help_window
+        help_window = Toplevel()
+        help_window.title('Help')
+        help_window.geometry('875x425')
+        help_window.iconbitmap(logo)
+        help_window.configure(bg='light grey')
+
+        # create a notebook
+        notebook = ttk.Notebook(help_window)
+        notebook.pack(pady=10, expand=True)
+
+        # create frames
+        about_help = ttk.Frame(notebook, width=400, height=280)
+        about_title = Label(about_help, justify='left', font='arial 20 bold', text='About the Recipe Database Program')
+        about_text = Label(about_help, justify='left', wraplength=750,
+                           text="   This Recipe Database program allows users to keep a log of their own collection of recipes. Users will be able to perform all CRUD functions on recipes and ingredients. Users will also be able to convert their recipes to different amounts of servings and different units of measurement as needed.")
+        about_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        about_text.grid(row=1, column=0, sticky='w', padx=10)
+
+        add_recipe_help = ttk.Frame(notebook, width=400, height=280)
+        add_recipe_title = Label(add_recipe_help, justify='left', font='arial 20 bold', text='How to Add a Recipe')
+        add_recipe_text1 = Label(add_recipe_help, justify='left', wraplength=750, text='')
+        global add_recipe_img
+        add_recipe_img = ImageTk.PhotoImage(Image.open("./images/add_recipe_button.png"))
+        add_recipe_help_label = ttk.Label(add_recipe_help, image=add_recipe_img)
+
+        add_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        add_recipe_help_label.grid(row=10, column=0)
+
+        edit_recipe_help = ttk.Frame(notebook, width=400, height=280)
+        edit_recipe_title = Label(edit_recipe_help, justify='left', font='arial 20 bold', text='How to Edit a Recipe')
+        edit_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        delete_recipe_help = ttk.Frame(notebook, width=400, height=280)
+        delete_recipe_title = Label(delete_recipe_help, justify='left', font='arial 20 bold', text='How to Delete a Recipe')
+        delete_recipe_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+
+
+        add_ingredient_help = ttk.Frame(notebook, width=400, height=280)
+        add_ingredient_title = Label(add_ingredient_help, justify='left', font='arial 20 bold', text='How to Add an Ingredient from a Recipe')
+        add_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        edit_ingredient_help = ttk.Frame(notebook, width=400, height=280)
+        edit_ingredient_title = Label(edit_ingredient_help, justify='left', font='arial 20 bold', text='How to Edit an Ingredient from a Recipe')
+        edit_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        delete_ingredient_help = ttk.Frame(notebook, width=400, height=280)
+        delete_ingredient_title = Label(delete_ingredient_help, justify='left', font='arial 20 bold', text='How to Delete an Ingredient from a Recipe')
+        delete_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        servings_change_help = ttk.Frame(notebook, width=400, height=280)
+        servings_change_title = Label(servings_change_help, justify='left', font='arial 20 bold', text='Understanding Servings Conversions')
+        servings_change_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        unit_change_help = ttk.Frame(notebook, width=400, height=280)
+        unit_change_title = Label(unit_change_help, justify='left', font='arial 20 bold', text='Understanding Unit Conversions')
+        unit_change_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        search_help = ttk.Frame(notebook, width=400, height=280)
+        search_title = Label(search_help, justify='left', font='arial 20 bold', text='How to Search for a Recipe in the Database')
+        search_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+
+        # pack frames
+        about_help.pack(fill='both', expand=True)
+        add_recipe_help.pack(fill='both', expand=True)
+        edit_recipe_help.pack(fill='both', expand=True)
+        delete_recipe_help.pack(fill='both', expand=True)
+        add_ingredient_help.pack(fill='both', expand=True)
+        edit_ingredient_help.pack(fill='both', expand=True)
+        delete_ingredient_help.pack(fill='both', expand=True)
+        servings_change_help.pack(fill='both', expand=True)
+        unit_change_help.pack(fill='both', expand=True)
+        search_help.pack(fill='both', expand=True)
+
+        # add frames to notebook
+        notebook.add(about_help, text='About')
+        notebook.add(add_recipe_help, text='Add Recipe')
+        notebook.add(edit_recipe_help, text='Edit Recipe')
+        notebook.add(delete_recipe_help, text='Delete Recipe')
+        notebook.add(add_ingredient_help, text='Add Ingredients')
+        notebook.add(edit_ingredient_help, text='Edit Ingredients')
+        notebook.add(delete_ingredient_help, text='Delete Ingredients')
+        notebook.add(servings_change_help, text='Servings Conversion')
+        notebook.add(unit_change_help, text='Unit Conversion')
+        notebook.add(search_help, text='Search for Recipes')
+
     # ENTRY :: ROOT
     search_bar = Entry(root, width=30, font=main_font)
     search_bar.insert(0, 'Search by Recipe Name')
@@ -991,6 +1054,30 @@ def main():
     search_bar_button.grid(row=2, column=0, sticky='w', padx=25)
 
     recipe_table_frame.grid(row=3, column=0, columnspan=7, padx=(15, 50), pady=25)
+
+    # ############ MENUBAR #######################################################
+    def menu(window):
+        global menubar
+        menubar = Menu(window)
+        # Adding File Menu and commands
+        file = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='File', menu=file)
+        file.add_command(label='My Recipes', command=None)
+        file.add_command(label='History', command=None)
+        file.add_separator()
+        file.add_command(label='Exit', command=window.destroy)
+        # Adding Edit Menu and commands
+        edit = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='Edit', menu=edit)
+        edit.add_command(label='Save Recipe', command=None)
+        # Adding Help Menu
+        help_ = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='Help', menu=help_)
+        help_.add_command(label='Help & Documentation', command=help_modal)
+        help_.add_separator()
+        help_.add_command(label='About Recipe Ingredient Converter', command=None)
+
+    menu(root)
 
     view_all_recipes_table()
     root.config(menu=menubar)
