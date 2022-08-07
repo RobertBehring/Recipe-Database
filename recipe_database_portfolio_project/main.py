@@ -1056,9 +1056,9 @@ def main():
         add_ingredient_img3 = ImageTk.PhotoImage(Image.open("./images/add_ingredient_modal.png"))
         add_ingredient_img3_label = ttk.Label(add_ingredient_help, image=add_ingredient_img3)
         add_ingredient_text5 = Label(add_ingredient_help, wraplength=750, font=help_font_bold,
-                                  text='Note: Ingredient names must match those in the list field below. \nAmount must be entered in decimal format, forward slashes "/" are not allowed.')
+                                     text='Note: Ingredient names must match those in the list field below. \nAmount must be entered in decimal format, forward slashes "/" are not allowed.')
         add_ingredient_text6 = Label(add_ingredient_help, justify='left', wraplength=750, font=help_font,
-                                 text='3. Finally click the "Add" button and you have now successfully added an ingredient to your recipe!')
+                                     text='3. Finally click the "Add" button and you have now successfully added an ingredient to your recipe!')
 
         add_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
         add_ingredient_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
@@ -1074,7 +1074,38 @@ def main():
         edit_ingredient_help = ttk.Frame(notebook, width=400, height=280)
         edit_ingredient_title = Label(edit_ingredient_help, justify='left', font=help_title_font,
                                       text='How to Edit an Ingredient from a Recipe')
+        edit_ingredient_text1 = Label(edit_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                      text='1. While on the main recipes page, click on the view button located in the "View" column of the recipes table corresponding to the recipe you want to add an ingredient to.')
+        global edit_ingredient_img1
+        edit_ingredient_img1 = ImageTk.PhotoImage(Image.open("./images/view_recipe_button.png"))
+        edit_ingredient_img1_label = ttk.Label(edit_ingredient_help, image=edit_ingredient_img1)
+        edit_ingredient_text2 = Label(edit_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                      text="2. This will take you to your chosen recipe's information page")
+        edit_ingredient_text3 = Label(edit_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                      text='\tFrom this page, click on the "Add Ingredient" button located at the top right corner of your ingredients table')
+        global edit_ingredient_img2
+        edit_ingredient_img2 = ImageTk.PhotoImage(Image.open("./images/edit_recipe_button.png"))
+        edit_ingredient_img2_label = ttk.Label(edit_ingredient_help, image=edit_ingredient_img2)
+        edit_ingredient_text4 = Label(edit_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                      text="3. The Add Ingredient modal window will popup and you will be prompted to enter the respective ingredient's information")
+        global edit_ingredient_img3
+        edit_ingredient_img3 = ImageTk.PhotoImage(Image.open("./images/edit_ingredient_modal.png"))
+        edit_ingredient_img3_label = ttk.Label(edit_ingredient_help, image=edit_ingredient_img3)
+        edit_ingredient_text5 = Label(edit_ingredient_help, wraplength=750, font=help_font_bold,
+                                      text='Note: Ingredient names must match those in the list field below. \nAmount must be entered in decimal format, forward slashes "/" are not allowed.')
+        edit_ingredient_text6 = Label(edit_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                      text='3. Finally click the "Add" button and you have now successfully added an ingredient to your recipe!')
+
         edit_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        edit_ingredient_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
+        edit_ingredient_img1_label.grid(row=2, column=0)
+        edit_ingredient_text2.grid(row=3, column=0, sticky='w', padx=10, pady=10)
+        edit_ingredient_text3.grid(row=4, column=0, sticky='w', padx=10, pady=10)
+        edit_ingredient_img2_label.grid(row=5, column=0)
+        edit_ingredient_text4.grid(row=6, column=0, sticky='w', padx=10, pady=10)
+        edit_ingredient_img3_label.grid(row=7, column=0)
+        edit_ingredient_text5.grid(row=8, column=0, padx=10, pady=10)
+        edit_ingredient_text6.grid(row=9, column=0, sticky='w', padx=10, pady=10)
 
         delete_ingredient_help = ttk.Frame(notebook, width=400, height=280)
         delete_ingredient_title = Label(delete_ingredient_help, justify='left', font=help_title_font,
