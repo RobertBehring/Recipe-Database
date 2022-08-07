@@ -410,6 +410,7 @@ def main():
         c = conn.cursor()
         log_check = query_one_log(recipe_id)
         log = log_field.get('1.0', 'end')
+        recipe_data = query_one_recipe(recipe_id)
         if log_check:
             # update
             log_id = log_check[0][0]
@@ -429,6 +430,7 @@ def main():
                       })
         conn.commit()
         conn.close()
+        tkinter.messagebox.showinfo('Success!', 'You have successfully updated the log for: ' + recipe_data[0][1])
 
     # DELETE
     def delete_one_recipe(recipe_id):
