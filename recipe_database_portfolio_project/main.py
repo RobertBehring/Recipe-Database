@@ -382,8 +382,7 @@ def main():
                           "amount": amount,
                           "unit": unit,
                           "oid": ingredient_id
-                      }
-                      )
+                      })
         name = name_entry_edit_recipe.get()
         serving_size = serving_size_entry_edit_recipe.get()
         date = date_entry_edit_recipe.get_date()
@@ -397,8 +396,7 @@ def main():
                       "serving_size": serving_size,
                       "date": date,
                       "oid": recipe_id
-                  }
-                  )
+                  })
         conn.commit()
         conn.close()
         for widgets in recipe_table_frame.winfo_children():
@@ -475,7 +473,7 @@ def main():
         else:
             tkinter.messagebox.showerror('No Recipes Exist', 'No recipes exists with the name: ' + name)
 
-    # ########### FUNCTIONS ######################################################
+    # ########### MICROSERVICE FUNCTIONS #########################################
     class RpcClient(object):
 
         def __init__(self):
