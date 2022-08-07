@@ -949,7 +949,7 @@ def main():
         global help_window
         help_window = Toplevel()
         help_window.title('Help')
-        help_window.geometry('900x1000')
+        help_window.geometry('1300x1100')
         help_window.iconbitmap(logo)
         help_window.configure(bg='light grey')
         help_font = 'arial 10'
@@ -1110,22 +1110,96 @@ def main():
         delete_ingredient_help = ttk.Frame(notebook, width=400, height=280)
         delete_ingredient_title = Label(delete_ingredient_help, justify='left', font=help_title_font,
                                         text='How to Delete an Ingredient from a Recipe')
+        delete_ingredient_text1 = Label(delete_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                        text='1. While on the main recipes page, click on the view button located in the "View" column of the recipes table corresponding to the recipe you want to add an ingredient to.')
+        global delete_ingredient_img1
+        delete_ingredient_img1 = ImageTk.PhotoImage(Image.open("./images/view_recipe_button.png"))
+        delete_ingredient_img1_label = ttk.Label(delete_ingredient_help, image=delete_ingredient_img1)
+        delete_ingredient_text2 = Label(delete_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                        text='2. While on the your respective recipe page, click on the delete button located in the "Delete" column of the ingredients table.')
+        global delete_ingredient_img2
+        delete_ingredient_img2 = ImageTk.PhotoImage(Image.open("./images/delete_recipe_button.png"))
+        delete_ingredient_img2_label = ttk.Label(delete_ingredient_help, image=delete_ingredient_img2)
+        delete_ingredient_text3 = Label(delete_ingredient_help, justify='left', wraplength=750, font=help_font,
+                                        text='3. A confirmation popup will appear, click OK to continue or Cancel to return')
+        global delete_ingredient_img3
+        delete_ingredient_img3 = ImageTk.PhotoImage(Image.open("./images/delete_recipe_popup.png"))
+        delete_ingredient_img3_label = ttk.Label(delete_ingredient_help, image=delete_ingredient_img3)
+
         delete_ingredient_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        delete_ingredient_text1.grid(row=1, column=0, sticky='w', padx=10, pady=10)
+        delete_ingredient_img1_label.grid(row=2, column=0)
+        delete_ingredient_text2.grid(row=3, column=0, sticky='w', padx=10, pady=10)
+        delete_ingredient_img2_label.grid(row=4, column=0)
+        delete_ingredient_text3.grid(row=5, column=0, sticky='w', padx=10, pady=10)
+        delete_ingredient_img3_label.grid(row=6, column=0)
 
         servings_change_help = ttk.Frame(notebook, width=400, height=280)
         servings_change_title = Label(servings_change_help, justify='left', font=help_title_font,
                                       text='Understanding Servings Conversions')
+        servings_change_text1 = Label(servings_change_help, justify='left', wraplength=750, font=help_font_bold,
+                                      text='When Serving Size changes in a recipe the corresponding ingredients in the recipe are modified as well')
+        global servings_change_img1
+        servings_change_img1 = ImageTk.PhotoImage(Image.open("./images/servings_modal_before+after.png"))
+        servings_change_img1_label = ttk.Label(servings_change_help, image=servings_change_img1)
+        servings_change_text2 = Label(servings_change_help, justify='left', wraplength=750, font=help_font_bold,
+                                      text='Serving Size change is reflected in the recipe data itself')
+        global servings_change_img2
+        servings_change_img2 = ImageTk.PhotoImage(Image.open("./images/servings_before+after.png"))
+        servings_change_img2_label = ttk.Label(servings_change_help, image=servings_change_img2)
+        servings_change_text3 = Label(servings_change_help, justify='left', wraplength=750, font=help_font_bold,
+                                      text='Ingredients amounts are modified with respect to the serving size change.')
+        global servings_change_img3
+        servings_change_img3 = ImageTk.PhotoImage(Image.open("./images/servings_ing_before+after.png"))
+        servings_change_img3_label = ttk.Label(servings_change_help, image=servings_change_img3)
+
         servings_change_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        servings_change_text1.grid(row=1, column=0, padx=10, pady=10)
+        servings_change_img1_label.grid(row=2, column=0)
+        servings_change_text2.grid(row=3, column=0, padx=10, pady=10)
+        servings_change_img2_label.grid(row=4, column=0)
+        servings_change_text3.grid(row=5, column=0, padx=10, pady=10)
+        servings_change_img3_label.grid(row=6, column=0)
 
         unit_change_help = ttk.Frame(notebook, width=400, height=280)
         unit_change_title = Label(unit_change_help, justify='left', font=help_title_font,
                                   text='Understanding Unit Conversions')
+        unit_change_text1 = Label(unit_change_help, wraplength=750, font=help_font_bold,
+                                  text="When an ingredient's respective unit of measurement is changed without changing its amount, the amount value will be changed with respect to the unit conversion.")
+        global unit_change_img1
+        unit_change_img1 = ImageTk.PhotoImage(Image.open("./images/unit_conv_modal.png"))
+        unit_change_img1_label = ttk.Label(unit_change_help, image=unit_change_img1)
+        unit_change_text2 = Label(unit_change_help, wraplength=750, font=help_font_bold,
+                                  text='Unit conversions can happen within different masses, volumes, or between masses and volumes. \nConversions can also occur between metric and imperial units')
+        global unit_change_img2
+        unit_change_img2 = ImageTk.PhotoImage(Image.open("./images/unit_conv_ing.png"))
+        unit_change_img2_label = ttk.Label(unit_change_help, image=unit_change_img2)
+
         unit_change_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        unit_change_text1.grid(row=1, column=0, padx=10, pady=10)
+        unit_change_img1_label.grid(row=2, column=0)
+        unit_change_text2.grid(row=3, column=0, padx=10, pady=10)
+        unit_change_img2_label.grid(row=4, column=0)
 
         search_help = ttk.Frame(notebook, width=400, height=280)
         search_title = Label(search_help, justify='left', font=help_title_font,
                              text='How to Search for a Recipe in the Database')
+        search_text1 = Label(search_help, wraplength=750, font=help_font_bold, justify='left',
+                             text="To search for a recipe, enter the name of your recipe in the search bar located at the top right of the main recipes page.\n\n\tClick Search to view your search results")
+        global search_img1
+        search_img1 = ImageTk.PhotoImage(Image.open("./images/search_bar.png"))
+        search_img1_label = ttk.Label(search_help, image=search_img1)
+        search_text2 = Label(search_help, wraplength=750, font=help_font_bold, justify='left',
+                             text='To return to viewing all of the recipes in your database, click on the "View All Recipes" button.\nThis will return you to the default main view.')
+        global search_img2
+        search_img2 = ImageTk.PhotoImage(Image.open("./images/view_all_recipes_button.png"))
+        search_img2_label = ttk.Label(search_help, image=search_img2)
+
         search_title.grid(row=0, column=0, sticky='w', padx=10, pady=25)
+        search_text1.grid(row=1, column=0, padx=10, pady=10)
+        search_img1_label.grid(row=2, column=0)
+        search_text2.grid(row=3, column=0, padx=10, pady=10)
+        search_img2_label.grid(row=4, column=0)
 
         # pack frames
         about_help.pack(fill='both', expand=True)
@@ -1180,20 +1254,15 @@ def main():
         # Adding File Menu and commands
         file = Menu(menubar, tearoff=0)
         menubar.add_cascade(label='File', menu=file)
-        file.add_command(label='My Recipes', command=None)
-        file.add_command(label='History', command=None)
-        file.add_separator()
         file.add_command(label='Exit', command=window.destroy)
         # Adding Edit Menu and commands
-        edit = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label='Edit', menu=edit)
-        edit.add_command(label='Save Recipe', command=None)
+        view = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='View', menu=view)
+        view.add_command(label='View All Recipes', command=lambda: home(window))
         # Adding Help Menu
         help_ = Menu(menubar, tearoff=0)
         menubar.add_cascade(label='Help', menu=help_)
         help_.add_command(label='Help & Documentation', command=help_modal)
-        help_.add_separator()
-        help_.add_command(label='About Recipe Ingredient Converter', command=None)
 
     menu(root)
 
