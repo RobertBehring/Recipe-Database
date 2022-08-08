@@ -19,7 +19,7 @@ import uuid
 #   unit of measurement conversion microservice that supports unit conversions for approved recipe ingredients
 #   to include conversions within masses and volumes and between masses and volumes (calculated via ingredient
 #   densities).
-# ######################################################################################################################
+
 
 # GLOBAL VARIABLES #####################################################################################################
 today = date.today()
@@ -56,8 +56,6 @@ help_font_bold = 'arial 10 bold'
 help_title_font = 'arial 20 bold'
 
 
-# ######################################################################################################################
-
 # GLOBAL FUNCTIONS #####################################################################################################
 def tk_window_configure(window, title: str, geometry: str, bg_color, logo=None):
     """
@@ -74,6 +72,54 @@ def tk_window_configure(window, title: str, geometry: str, bg_color, logo=None):
     if logo:
         window.iconbitmap(logo)
     window.configure(bg=bg_color)
+
+
+class ToolTip(object):
+    """
+    Code citation: Stevoisiak (2010) https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter <python>
+    Code citation: vegaseat (2015) https://www.daniweb.com/programming/software-development/code/484591/a-tooltip-class-for-tkinter <python>
+    """
+
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.id = None
+        self.x = self.y = 0
+
+    def showtip(self, text):
+        "Display text in tooltip window"
+        self.text = text
+        if self.tipwindow or not self.text:
+            return
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 57
+        y = y + cy + self.widget.winfo_rooty() + 27
+        self.tipwindow = tw = Toplevel(self.widget)
+        tw.wm_overrideredirect(1)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        label = Label(tw, text=self.text, justify=LEFT,
+                      background="#ffffe0", relief=SOLID, borderwidth=1,
+                      font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
+
+def CreateToolTip(widget, text):
+    toolTip = ToolTip(widget)
+
+    def enter(event):
+        toolTip.showtip(text)
+
+    def leave(event):
+        toolTip.hidetip()
+
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
 
 
 def update(data, entry_field):
@@ -94,6 +140,8 @@ def home(window):
     :param window:
     :return:
     """
+    for widgets in window.winfo_children():
+        widgets.destroy()
     window.destroy()
     main()
 
@@ -301,7 +349,7 @@ def rec_ingredient_unit_conversion(recipe_data, ingredient_data):
              WHERE oid = :oid""",
                   {
                       "name": ingredient_name,
-                      "amount": str(round(float(body[recipe_name][0]["quantity"]), 2)),
+                      "amount": str(float(body[recipe_name][0]["quantity"])),
                       "unit": body[recipe_name][0]["measure"],
                       "oid": ingredient_id
                   }
@@ -458,7 +506,11 @@ def view_ingredient_table(recipe_id):
         for j in range(2, len(recipe_data[0])):
             e = Entry(ingredient_table_frame, width=20, font=main_font, border=2, cursor='arrow')
             e.grid(row=i + 1, column=j - 2, ipadx=10, ipady=10)
-            e.insert(END, recipe_data[i][j])
+            try:
+                float(recipe_data[i][j])
+                e.insert(END, round(float(recipe_data[i][j]), 2))
+            except:
+                e.insert(END, recipe_data[i][j])
             e.config(state='disabled', disabledforeground='black')
         ingredient_id = recipe_data[i][0]
         recipe_id = recipe_data[i][1]
@@ -476,8 +528,6 @@ def view_ingredient_table(recipe_id):
         edit_button_ingredient_table_frame.grid(row=i + 1, column=j - 1, ipadx=60, ipady=3)
         delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=55, ipady=3)
 
-
-# ######################################################################################################################
 
 # DATABASE FUNCTIONS ###################################################################################################
 def build_database():
@@ -600,7 +650,9 @@ def update_one_recipe(recipe_id):
     date = date_entry_edit_recipe.get_date()
     recipe_data = query_one_recipe(recipe_id)
     if recipe_data_val(name, serving_size, date):
-        if str(serving_size) != str(float(recipe_data[0][2])):
+        if str(serving_size) != str(float(recipe_data[0][2])) and tkinter.messagebox.askokcancel(
+                'Automatic Servings Conversion',
+                'Would you like your recipe ingredient amounts to change with your serving size change?'):
             serving_change = {"servings": [str(float(recipe_data[0][2])), str(serving_size)]}
             rpc_servings_conversion(recipe_data, serving_change)
         else:
@@ -635,6 +687,7 @@ def delete_one_recipe(recipe_id):
         return
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
+    ingredients_data = query_all_ingredients_for_recipe(recipe_id)
     c.execute('DELETE FROM recipes WHERE oid=' + str(recipe_id))
 
     conn.commit()
@@ -764,7 +817,9 @@ def update_one_ingredient(ingredient_id, recipe_id):
         {"ingredient": str(ingredient_data[0][2]), "quantity": str(ingredient_data[0][3]),
          "measure": str(ingredient_data[0][4]), "desired": str(unit)}]}
     if ingredient_data_val(name, amount, unit):
-        if unit != ingredient_data[0][4] and float(amount) == ingredient_data[0][3]:
+        if unit != ingredient_data[0][4] and float(amount) == ingredient_data[0][3] and tkinter.messagebox.askokcancel(
+                'Automatic Unit Conversion',
+                'Would you like to convert your ingredient amount to correspond to your unit change?'):
             send_ingredient_unit_conversion(ingredient_json)
             rec_ingredient_unit_conversion(recipe_data, ingredient_data)
         else:
@@ -801,7 +856,7 @@ def update_many_ingredients_servings_conversion(recipe_id, ingredients):
     ingredients = json.loads(ingredients)
     for i in range(1, len(ingredients)):
         name = ingredients[i]["ingredient"]
-        amount = round(ingredients[i]["qty"], 2)
+        amount = ingredients[i]["qty"]
         unit = ingredients[i]["measure"]
         ingredient_id = ingredient_data[i - 1][0]
         c.execute("""UPDATE ingredients SET
@@ -890,8 +945,6 @@ def insert_update_log(recipe_id):
     conn.close()
     tkinter.messagebox.showinfo('Success!', 'You have successfully updated the log for: ' + recipe_data[0][1])
 
-
-# ######################################################################################################################
 
 # MODAL WINDOWS ########################################################################################################
 def add_recipe_modal():
@@ -1372,8 +1425,6 @@ def help_modal():
     notebook.add(search_help, text='Search for Recipes')
 
 
-# ######################################################################################################################
-
 # WINDOWS ##############################################################################################################
 def main():
     """
@@ -1394,12 +1445,15 @@ def main():
     # ENTRY :: ROOT
     search_bar = Entry(root, width=30, font=main_font)
     search_bar.insert(0, 'Search by Recipe Name')
+    CreateToolTip(search_bar,
+                  "Looking for a specific recipe? You can search by name here, search is relaxed so don't worry if you don't know the whole name.")
 
     # BUTTONS :: ROOT
     view_all_recipes_button = Button(root, text="View All Recipes", command=lambda: home(root), font='arial 12 bold',
                                      bg='dark green', fg='white', borderwidth=7, cursor='hand2')
     add_recipe_button = Button(root, text="Add Recipe", command=add_recipe_modal, font='arial 12 bold', bg='red',
                                fg='white', borderwidth=7, cursor='hand2')
+    CreateToolTip(add_recipe_button, "Click here to add another recipe to your database.")
     search_bar_button = Button(root, text="Search", command=lambda: search_for_recipe_by_name(search_bar.get()))
 
     # POSITIONING :: ROOT
@@ -1447,13 +1501,18 @@ def view_recipe_window(recipe_id, name):
                                                command=lambda: add_ingredient_modal(recipe_id),
                                                font='arial 12 bold', bg='red', fg='white', borderwidth=7,
                                                cursor='hand2')
+    CreateToolTip(add_ingredient_button_view_recipe, "Click here to add an ingredient to " + name)
+
     return_button_view_recipe = Button(view_recipe, text='Return to Recipes', command=lambda: home(view_recipe),
                                        font='arial 12 bold',
                                        bg='dark green', fg='white', borderwidth=7, cursor='hand2')
+    # CreateToolTip(return_button_view_recipe, "Click here to return to the home page.")
+
     update_log_button_view_recipe = Button(view_recipe, text='Update Log',
                                            command=lambda: insert_update_log(recipe_id),
                                            font='arial 12 bold',
                                            bg='red', fg='white', borderwidth=7, cursor='hand2')
+    CreateToolTip(update_log_button_view_recipe, "Click here to update the recipe log.")
 
     return_button_view_recipe.grid(row=0, column=0, pady=25, sticky='w', padx=25)
 
@@ -1468,9 +1527,6 @@ def view_recipe_window(recipe_id, name):
 
     menu(view_recipe)
     view_recipe.config(menu=menubar)
-
-
-# ######################################################################################################################
 
 
 if __name__ == '__main__':

@@ -166,7 +166,7 @@ def convert_ingredient(ingredient: dict):
                 # metric to imperial
                 result = result * metric_to_imperial_mass
                 # to desired unit
-                result = round(result * imperial_mass_unit_factors[desired_unit], 6)
+                result = result * imperial_mass_unit_factors[desired_unit]
             # imperial->metric conversion
             else:
                 # convert to base unit (ounces)
@@ -174,7 +174,7 @@ def convert_ingredient(ingredient: dict):
                 # convert imperial to metric
                 result = result * imperial_to_metric_mass
                 # convert to desired unit
-                result = round(result * metric_mass_unit_factors[desired_unit], 6)
+                result = result * metric_mass_unit_factors[desired_unit]
         # is conversion vol->vol
         elif unit_is_mass == desired_is_mass:
             # metric mass conversion
@@ -192,7 +192,7 @@ def convert_ingredient(ingredient: dict):
                 # metric to imperial
                 result = result * metric_to_imperial_vol
                 # to desired unit
-                result = round(result * imperial_volume_unit_factors[desired_unit], 6)
+                result = result * imperial_volume_unit_factors[desired_unit]
             # imperial->metric conversion
             else:
                 # convert to base unit (c)
@@ -200,7 +200,7 @@ def convert_ingredient(ingredient: dict):
                 # convert imperial to metric
                 result = result * imperial_to_metric_vol
                 # convert to desired unit
-                result = round(result * metric_volume_unit_factors[desired_unit], 6)
+                result = result * metric_volume_unit_factors[desired_unit]
         # is conversion mass->vol
         elif unit_is_mass:
             # metric mass conversion
@@ -212,7 +212,7 @@ def convert_ingredient(ingredient: dict):
                 # imperial volume to metric volume
                 result = result * imperial_to_metric_vol
                 # convert to desired unit
-                result = round(result * metric_volume_unit_factors[desired_unit], 6)
+                result = result * metric_volume_unit_factors[desired_unit]
             # imperial mass conversion
             elif unit_is_metric == desired_is_metric:
                 # convert to base unit (ounces)
@@ -222,7 +222,7 @@ def convert_ingredient(ingredient: dict):
                 # convert mass to volume
                 result = result * (1 / density)
                 # convert to desired unit
-                result = round(result * imperial_volume_unit_factors[desired_unit], 6)
+                result = result * imperial_volume_unit_factors[desired_unit]
             # metric->imperial conversion
             elif unit_is_metric:
                 # convert to base (grams)
@@ -230,7 +230,7 @@ def convert_ingredient(ingredient: dict):
                 # convert grams to cups
                 result = result * (1 / density)
                 # convert cups to desired unit
-                result = round(result * imperial_volume_unit_factors[desired_unit], 6)
+                result = result * imperial_volume_unit_factors[desired_unit]
             # imperial->metric conversion
             else:
                 # convert to base unit (ounces)
@@ -242,7 +242,7 @@ def convert_ingredient(ingredient: dict):
                 # convert cups to metric liters
                 result = result * imperial_to_metric_vol
                 # convert to desired metric unit
-                result = round(result * metric_volume_unit_factors[desired_unit], 6)
+                result = result * metric_volume_unit_factors[desired_unit]
         # is conversion vol->mass
         else:
             # metric vol conversion
@@ -254,7 +254,7 @@ def convert_ingredient(ingredient: dict):
                 # convert to grams via density
                 result = result * density
                 # convert to desired via metric_mass_unit_factors
-                result = round(result * metric_mass_unit_factors[desired_unit], 6)
+                result = result * metric_mass_unit_factors[desired_unit]
             # imperial vol conversion
             elif unit_is_metric == desired_is_metric:
                 # to base unit cups
@@ -264,7 +264,7 @@ def convert_ingredient(ingredient: dict):
                 # grams to ounces
                 result = result * metric_to_imperial_mass
                 # ounces to desired unit
-                result = round(result * imperial_mass_unit_factors[desired_unit], 6)
+                result = result * imperial_mass_unit_factors[desired_unit]
             # metric->imperial conversion
             elif unit_is_metric:
                 # convert to base (liters)
@@ -276,7 +276,7 @@ def convert_ingredient(ingredient: dict):
                 # convert to ounces
                 result = result * metric_to_imperial_mass
                 # convert to desired imperial mass
-                result = round(result * imperial_mass_unit_factors[desired_unit], 6)
+                result = result * imperial_mass_unit_factors[desired_unit]
             # imperial->metric conversion
             else:
                 # convert to base cups
@@ -284,7 +284,7 @@ def convert_ingredient(ingredient: dict):
                 # convert to grams via density
                 result = result * density
                 # convert to desired mass
-                result = round(result * metric_mass_unit_factors[desired_unit])
+                result = result * metric_mass_unit_factors[desired_unit]
 
     return {"ingredient": ingredient["ingredient"], "quantity": str(result), "measure": desired_unit}
 
