@@ -1,6 +1,16 @@
+# Recipe Database Program
+#   Version 1.0.0 Completion :: 08/08/22
+#   Author: Robert S. Behring
+#   Developed for Oregon State University's CS 361 Software Engineering I course.
+# PROGRAM DESCRIPTION
+#   The program is intended to be used as a full CRUD recipe storage database with implementation to store
+#   recipe information, ingredient information, and recipe log information. The program also contains a
+#   unit of measurement conversion microservice that supports unit conversions for approved recipe ingredients
+#   to include conversions within masses and volumes and between masses and volumes (calculated via ingredient
+#   densities).
+
 import tkinter.messagebox
 from tkinter import *
-# from tkinter.tix import *
 from tkinter import ttk
 from tkcalendar import Calendar
 from datetime import date
@@ -29,6 +39,8 @@ ingredients = ['all-purpose flour', 'baking powder', 'baking soda', 'bread flour
                'sweetened condensed milk', 'tahini', 'tapioca flour', 'tomato paste', 'turbinado sugar',
                'vanilla extract', 'vegetable oil', 'vegetable shortening', 'walnuts', 'water', 'instant yeast',
                'yogurt', 'zucchini']
+
+# Window styling
 logo = r'.\images\favicon.ico'
 main_bg = '#fff'
 modal_bg = '#fff'
@@ -43,6 +55,15 @@ help_title_font = 'arial 20 bold'
 
 
 def tk_window_configure(window, title: str, geoemetry: str, bg_color, logo=None):
+    """
+    Provides window configuration to conform to program styling.
+    :param window:
+    :param title:
+    :param geoemetry:
+    :param bg_color:
+    :param logo:
+    :return:
+    """
     window.title(title)
     window.geometry(geoemetry)
     if logo:
@@ -51,17 +72,32 @@ def tk_window_configure(window, title: str, geoemetry: str, bg_color, logo=None)
 
 
 def update(data, entry_field):
+    """
+    Update for a given entry field.
+    :param data:
+    :param entry_field:
+    :return:
+    """
     entry_field.delete(0, 'end')
     for item in data:
         entry_field.insert('end', item)
 
 
 def home(window):
+    """
+    Return to program start
+    :param window:
+    :return:
+    """
     window.destroy()
     main()
 
 
 def build_database():
+    """
+    Used to build recipes.db to include: recipes, ingredients, and logs tables
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
 
@@ -98,6 +134,11 @@ CONSTRAINT fk_recipes
 
 
 def menu(window):
+    """
+    Creates a universal menubar located right below window title bar.
+    :param window:
+    :return:
+    """
     global menubar
     menubar = Menu(window)
     # File Menu and commands
@@ -115,6 +156,13 @@ def menu(window):
 
 
 def recipe_data_val(name, serving_size, date):
+    """
+    Provides data validation for given fields. To be used with CRUD recipes table functions.
+    :param name:
+    :param serving_size:
+    :param date:
+    :return:
+    """
     name_isempty = name == ''
     name_isascii = name.isascii()
     serving_size_isempty = serving_size == ''
@@ -141,6 +189,13 @@ def recipe_data_val(name, serving_size, date):
 
 
 def ingredient_data_val(name, amount, unit):
+    """
+    Provides data validation for above ingredient data. To be used with ingredients table CRUD functions.
+    :param name:
+    :param amount:
+    :param unit:
+    :return:
+    """
     name_isempty = name == ''
     name_isascii = name.isascii()
     amount_isempty = amount == ''
@@ -178,6 +233,10 @@ def ingredient_data_val(name, amount, unit):
 
 # CREATE
 def insert_recipe():
+    """
+    CREATE for one recipe entry. Uses data from add recipe modal.
+    :return:
+    """
     name = name_entry_add_recipe.get()
     serving_size = serving_size_entry_add_recipe.get()
     date = date_entry_add_recipe.get_date()
@@ -206,6 +265,11 @@ def insert_recipe():
 
 
 def insert_ingredient(recipe_id):
+    """
+    CREATE for one ingredient entry given a respective recipe_id (FK). Uses add ingredient modal data.
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
     name = name_entry_add_ingredient.get()
@@ -229,6 +293,10 @@ def insert_ingredient(recipe_id):
 
 # READ
 def query_all_recipes():
+    """
+    READ function for recipes table. Returns oid, * for all recipes entries.
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
 
@@ -241,6 +309,11 @@ def query_all_recipes():
 
 
 def query_one_recipe(recipe_id):
+    """
+    Read functionality for recipes table. Returns oid, * for one recipe.
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
 
@@ -253,6 +326,12 @@ def query_one_recipe(recipe_id):
 
 
 def query_all_ingredients_for_recipe(recipe_id):
+    """
+    READ functionality for ingredients table. Returns all ingredients' info (oid, recipe_id, name, amount, unit) for a
+    single recipe.
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
     c.execute("SELECT oid, recipe_id, name, amount, unit FROM ingredients WHERE recipe_id=" + str(recipe_id))
@@ -264,6 +343,11 @@ def query_all_ingredients_for_recipe(recipe_id):
 
 
 def query_one_ingredient(ingredient_id):
+    """
+    READ functionality for ingredients table. Returns oid, * for a single ingredient.
+    :param ingredient_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
 
@@ -276,6 +360,11 @@ def query_one_ingredient(ingredient_id):
 
 
 def query_one_log(recipe_id):
+    """
+    READ functionality for logs table. Returns oid, log for a given recipe.
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
 
@@ -289,6 +378,12 @@ def query_one_log(recipe_id):
 
 # UPDATE
 def update_one_recipe(recipe_id):
+    """
+    UPDATE functionality for recipes table. If serving size is changed the servings conversion microservice is called
+    and all the corresponding recipe ingredients are modified.
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
     name = name_entry_edit_recipe.get()
@@ -320,6 +415,14 @@ def update_one_recipe(recipe_id):
 
 
 def update_one_ingredient(ingredient_id, recipe_id):
+    """
+    UPDATE functionality for ingredients table. Updates a single ingredient. If unit is changed without changing the
+    amount the unit conversion microservice is called and the corresponding amount is changed in accordance to the
+    data received.
+    :param ingredient_id:
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
     name = name_entry_edit_ingredient.get()
@@ -355,6 +458,13 @@ def update_one_ingredient(ingredient_id, recipe_id):
 
 
 def update_many_ingredients_servings_conversion(recipe_id, ingredients):
+    """
+    Helper UPDATE function for RPC client to facilitate servings conversion microservice. This function updates
+    many ingredients at once.
+    :param recipe_id:
+    :param ingredients:
+    :return:
+    """
     ingredient_data = query_all_ingredients_for_recipe(recipe_id)
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
@@ -397,6 +507,12 @@ def update_many_ingredients_servings_conversion(recipe_id, ingredients):
 
 
 def insert_update_log(recipe_id):
+    """
+    CREATE/UPDATE functionality for logs table. If no log exists the function CREATES an entry. If a log exists the
+    function UPDATES the log with the new information from the log field.
+    :param recipe_id:
+    :return:
+    """
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
     log_check = query_one_log(recipe_id)
@@ -426,6 +542,12 @@ def insert_update_log(recipe_id):
 
 # DELETE
 def delete_one_recipe(recipe_id):
+    """
+    DELETE one functionality for recipes table. Asks user to confirm delete. If yes the function deletes a single recipe
+    otherwise the function ends.
+    :param recipe_id:
+    :return:
+    """
     if not tkinter.messagebox.askokcancel('Delete Warning',
                                           'Deleting this entry is permanent.\nDo you want to continue?'):
         return
@@ -569,6 +691,12 @@ def rec_ingredient_unit_conversion(recipe_data, ingredient_data):
 
 
 def rpc_servings_conversion(recipe_data, serving_change):
+    """
+    Helper function for RpcClient to facilitate Servings Conversion Microservice
+    :param recipe_data:
+    :param serving_change:
+    :return:
+    """
     recipe_id = recipe_data[0][0]
     ingredient_data = query_all_ingredients_for_recipe(recipe_id)
     conversion_request = [serving_change]
