@@ -1453,7 +1453,6 @@ def main():
                                      bg='dark green', fg='white', borderwidth=7, cursor='hand2')
     add_recipe_button = Button(root, text="Add Recipe", command=add_recipe_modal, font='arial 12 bold', bg='red',
                                fg='white', borderwidth=7, cursor='hand2')
-    CreateToolTip(add_recipe_button, "Click here to add another recipe to your database.")
     search_bar_button = Button(root, text="Search", command=lambda: search_for_recipe_by_name(search_bar.get()))
 
     # POSITIONING :: ROOT
@@ -1501,7 +1500,6 @@ def view_recipe_window(recipe_id, name):
                                                command=lambda: add_ingredient_modal(recipe_id),
                                                font='arial 12 bold', bg='red', fg='white', borderwidth=7,
                                                cursor='hand2')
-    CreateToolTip(add_ingredient_button_view_recipe, "Click here to add an ingredient to " + name)
 
     return_button_view_recipe = Button(view_recipe, text='Return to Recipes', command=lambda: home(view_recipe),
                                        font='arial 12 bold',
@@ -1512,7 +1510,6 @@ def view_recipe_window(recipe_id, name):
                                            command=lambda: insert_update_log(recipe_id),
                                            font='arial 12 bold',
                                            bg='red', fg='white', borderwidth=7, cursor='hand2')
-    CreateToolTip(update_log_button_view_recipe, "Click here to update the recipe log.")
 
     return_button_view_recipe.grid(row=0, column=0, pady=25, sticky='w', padx=25)
 
