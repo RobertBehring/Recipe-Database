@@ -1,14 +1,3 @@
-# Recipe Database Program
-#   Version 1.0.0 Completion :: 08/08/22
-#   Author: Robert S. Behring
-#   Developed for Oregon State University's CS 361 Software Engineering I course.
-# PROGRAM DESCRIPTION
-#   The program is intended to be used as a full CRUD recipe storage database with implementation to store
-#   recipe information, ingredient information, and recipe log information. The program also contains a
-#   unit of measurement conversion microservice that supports unit conversions for approved recipe ingredients
-#   to include conversions within masses and volumes and between masses and volumes (calculated via ingredient
-#   densities).
-
 import tkinter.messagebox
 from tkinter import *
 from tkinter import ttk
@@ -20,6 +9,19 @@ import json
 import pika
 import uuid
 
+# Recipe Database Program ##############################################################################################
+#   Version 1.0.0 Completion :: 08/08/22
+#   Author: Robert S. Behring
+#   Developed for Oregon State University's CS 361 Software Engineering I course.
+# PROGRAM DESCRIPTION
+#   The program is intended to be used as a full CRUD recipe storage database with implementation to store
+#   recipe information, ingredient information, and recipe log information. The program also contains a
+#   unit of measurement conversion microservice that supports unit conversions for approved recipe ingredients
+#   to include conversions within masses and volumes and between masses and volumes (calculated via ingredient
+#   densities).
+# ######################################################################################################################
+
+# GLOBAL VARIABLES #####################################################################################################
 today = date.today()
 year, month, day = today.strftime('%y'), today.strftime('%m'), today.strftime('%d')
 units = ['mg', 'g', 'kg', "oz", "lb", "ml", "l", "kl", "tsp", "tbsp", "fl oz",
@@ -54,6 +56,9 @@ help_font_bold = 'arial 10 bold'
 help_title_font = 'arial 20 bold'
 
 
+# ######################################################################################################################
+
+# GLOBAL FUNCTIONS #####################################################################################################
 def tk_window_configure(window, title: str, geoemetry: str, bg_color, logo=None):
     """
     Provides window configuration to conform to program styling.
@@ -91,46 +96,6 @@ def home(window):
     """
     window.destroy()
     main()
-
-
-def build_database():
-    """
-    Used to build recipes.db to include: recipes, ingredients, and logs tables
-    :return:
-    """
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-
-    # RECIPES
-    c.execute("""CREATE TABLE IF NOT EXISTS recipes (
-            name text,
-            serving_size real,
-            date text        
-    )""")
-
-    # INGREDIENTS
-    c.execute("""CREATE TABLE IF NOT EXISTS ingredients (
-            recipe_id INTEGER,
-            name TEXT,
-            amount REAL,
-            unit TEXT,
-            CONSTRAINT fk_recipes 
-                FOREIGN KEY (recipe_id) 
-                REFERENCES recipes(oid)  
-                ON DELETE CASCADE    
-    )""")
-
-    # LOGS
-    c.execute("""CREATE TABLE IF NOT EXISTS logs (
-recipe_id INTEGER,
-log TEXT,
-CONSTRAINT fk_recipes
-    FOREIGN KEY (recipe_id)
-    REFERENCES recipes(oid)
-    ON DELETE CASCADE
-)""")
-    conn.commit()
-    conn.close()
 
 
 def menu(window):
@@ -231,7 +196,331 @@ def ingredient_data_val(name, amount, unit):
         return True
 
 
-# CREATE
+class RpcClient(object):
+    """
+    Provides connectivity to servings conversion microservice via RabbitMQ
+    """
+
+    def __init__(self):
+        self.connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host='localhost'))
+
+        self.channel = self.connection.channel()
+
+        result = self.channel.queue_declare(queue='', exclusive=True)
+        self.callback_queue = result.method.queue
+
+        self.channel.basic_consume(
+            queue=self.callback_queue,
+            on_message_callback=self.on_response,
+            auto_ack=True)
+
+        self.response = None
+        self.corr_id = None
+
+    def on_response(self, ch, method, props, body):
+        """
+        Receives response
+        :param ch:
+        :param method:
+        :param props:
+        :param body:
+        :return:
+        """
+        if self.corr_id == props.correlation_id:
+            self.response = body.decode('utf-8')
+
+    def call(self, n):
+        """
+        Look for data in the 'data' queue. Sends data 'n' to be converted.
+        :param n:
+        :return:
+        """
+        self.response = None
+        self.corr_id = str(uuid.uuid4())
+        self.channel.basic_publish(
+            exchange='',
+            routing_key='data',
+            properties=pika.BasicProperties(
+                reply_to=self.callback_queue,
+                correlation_id=self.corr_id,
+            ),
+            body=str(n))
+        self.connection.process_data_events(time_limit=None)
+        return self.response
+
+
+def send_ingredient_unit_conversion(ingredient_json):
+    """
+    Sends ingredient data to be converted via unit conversion microservice.
+    :param ingredient_json:
+    :return:
+    """
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+
+    channel.queue_declare(queue='conversion request')
+
+    channel.basic_publish(exchange='',
+                          routing_key='conversion request',
+                          body=json.dumps(ingredient_json)
+                          )
+    print(f" [x] Sent '{str(ingredient_json)}'")
+
+    connection.close()
+
+
+def rec_ingredient_unit_conversion(recipe_data, ingredient_data):
+    """
+    Receives converted data from unit conversion microservice.
+    :param recipe_data:
+    :param ingredient_data:
+    :return:
+    """
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+
+    channel.queue_declare(queue='conversion delivery')
+
+    def callback(ch, method, properties, body):
+        ingredient_name = ingredient_data[0][2]
+        recipe_name = recipe_data[0][1]
+        ingredient_id = ingredient_data[0][0]
+        recipe_id = recipe_data[0][0]
+        body = body.decode('utf-8')
+        print(" [x] Received %r" % body)
+        conn = sqlite3.connect('recipes.db')
+        c = conn.cursor()
+        body = json.loads(body)
+        c.execute("""UPDATE ingredients SET
+             name = :name,
+             amount = :amount,
+             unit = :unit
+             WHERE oid = :oid""",
+                  {
+                      "name": ingredient_name,
+                      "amount": str(round(float(body[recipe_name][0]["quantity"]), 2)),
+                      "unit": body[recipe_name][0]["measure"],
+                      "oid": ingredient_id
+                  }
+                  )
+        conn.commit()
+        conn.close()
+        for widgets in ingredient_table_frame.winfo_children():
+            widgets.destroy()
+        view_ingredient_table(recipe_id)
+        channel.close()
+
+    channel.basic_consume(queue='conversion delivery',
+                          auto_ack=True,
+                          on_message_callback=callback)
+
+    print(' [*] rec_ingredient_unit_conversion() Waiting for messages. To exit press CTRL+C')
+    channel.start_consuming()
+
+
+def rpc_servings_conversion(recipe_data, serving_change):
+    """
+    Helper function for RpcClient to facilitate Servings Conversion Microservice
+    :param recipe_data:
+    :param serving_change:
+    :return:
+    """
+    recipe_id = recipe_data[0][0]
+    ingredient_data = query_all_ingredients_for_recipe(recipe_id)
+    conversion_request = [serving_change]
+    for i in range(len(ingredient_data)):
+        ingredient_request = {"ingredient": str(ingredient_data[i][2]), "qty": str(ingredient_data[i][3]),
+                              "measure": str(ingredient_data[i][4])}
+        conversion_request.append(ingredient_request)
+    conversion_request = json.dumps(conversion_request)
+    rpc = RpcClient()
+    data = rpc.call(conversion_request)
+    update_many_ingredients_servings_conversion(recipe_id, data)
+
+
+def view_all_recipes_table(recipes_data=None):
+    """
+    GUI presentation of all recipes in given recipes data or if None all recipes data in db.
+    :param recipes_data:
+    :return:
+    """
+    if recipes_data is None:
+        recipes_data = query_all_recipes()
+    header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added', 'View', 'Edit', 'Delete')]
+    # headers
+    for i in range(len(header)):
+        for j in range(len(header[0])):
+            e = Entry(recipe_table_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
+            e.grid(row=i, column=j, ipadx=10, ipady=10)
+            e.insert(END, header[i][j])
+            e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff', font='arial 14 bold')
+    if not recipes_data:
+        no_recipes_label = Label(recipe_table_frame,
+                                 text="There are no recipes in the database. \nAdd a recipe to continue",
+                                 font='arial 24')
+        no_recipes_label.grid(row=1, column=0, columnspan=4, padx=25, pady=25)
+        return
+    # recipes data
+    for i in range(len(recipes_data)):
+        for j in range(len(recipes_data[0])):
+            e = Entry(recipe_table_frame, width=24, font=main_font, border=2, cursor='arrow')
+            e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
+            e.insert(END, recipes_data[i][j])
+            if i % 2 == 0:
+                e.config(state='disabled', disabledbackground='#fff', disabledforeground='#000', font='arial 12')
+            else:
+                e.config(state='disabled', disabledbackground='#ddd', disabledforeground='#000', font='arial 12')
+        oid = recipes_data[i][0]
+        name = recipes_data[i][1]
+        view_button_add_recipe = Button(recipe_table_frame, text="View",
+                                        command=lambda oid=oid, name=name: view_recipe_window(oid, name),
+                                        fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
+        edit_button_add_recipe = Button(recipe_table_frame, text="Edit",
+                                        command=lambda oid=oid, name=name: edit_recipe_modal(oid, name),
+                                        fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
+        delete_button_add_recipe = Button(recipe_table_frame, text="Delete",
+                                          command=lambda oid=oid: delete_one_recipe(oid), fg='black',
+                                          font=main_font_underline, borderwidth=5, cursor='hand2')
+        view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=95, ipady=3)
+        edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=95, ipady=3)
+        delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=95, ipady=3)
+
+
+def view_one_recipe_table(frame, recipe_id, edit=False):
+    """
+    Provides GUI placement of a single recipe, if edit=True, auxiliary buttons will be present. (View, Edit, Delete)
+    :param frame:
+    :param recipe_id:
+    :param edit:
+    :return:
+    """
+    recipe_data = query_one_recipe(recipe_id)
+    if not edit:
+        header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added')]
+    else:
+        header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added', 'View', 'Edit', 'Delete')]
+    # headers
+    for i in range(len(header)):
+        for j in range(len(header[0])):
+            e = Entry(frame, width=20, font=main_font_bold, border=2, cursor='arrow')
+            e.grid(row=i, column=j, ipadx=10, ipady=10)
+            e.insert(END, header[i][j])
+            e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff')
+    # recipe data
+    for i in range(len(recipe_data)):
+        for j in range(len(recipe_data[0])):
+            e = Entry(frame, width=20, font=main_font, border=2, cursor='arrow')
+            e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
+            e.insert(END, recipe_data[i][j])
+            e.config(state='disabled', disabledforeground='black')
+        oid = recipe_data[i][0]
+        name = recipe_data[i][1]
+        if edit:
+            view_button_add_recipe = Button(frame, text="View",
+                                            command=lambda oid=oid, name=name: view_recipe_window(oid, name),
+                                            fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
+            edit_button_add_recipe = Button(frame, text="Edit",
+                                            command=lambda oid=oid, name=name: edit_recipe_modal(oid, name),
+                                            fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
+            delete_button_add_recipe = Button(frame, text="Delete",
+                                              command=lambda oid=oid: delete_one_recipe(oid), fg='black',
+                                              font=main_font_underline, borderwidth=5, cursor='hand2')
+            view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=75, ipady=3)
+            edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=75, ipady=3)
+            delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=75, ipady=3)
+
+
+def view_ingredient_table(recipe_id):
+    """
+    Provides GUI placement of all ingredients for a given recipe.
+    :param recipe_id:
+    :return:
+    """
+    recipe_data = query_all_ingredients_for_recipe(recipe_id)
+    header = [('Name', 'Amount', 'Unit', 'Edit', 'Delete')]
+    for i in range(len(header)):
+        for j in range(len(header[0])):
+            e = Entry(ingredient_table_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
+            e.grid(row=i, column=j, ipadx=10, ipady=10)
+            e.insert(END, header[i][j])
+            e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff')
+    if recipe_data == []:
+        no_ingredients_label = Label(ingredient_table_frame,
+                                     text="There are no ingredients for this recipe. \nAdd an ingredient to continue",
+                                     font='arial 24')
+        no_ingredients_label.grid(row=1, column=0, columnspan=4, padx=25, pady=25)
+        return
+
+    for i in range(len(recipe_data)):
+        for j in range(2, len(recipe_data[0])):
+            e = Entry(ingredient_table_frame, width=20, font=main_font, border=2, cursor='arrow')
+            e.grid(row=i + 1, column=j - 2, ipadx=10, ipady=10)
+            e.insert(END, recipe_data[i][j])
+            e.config(state='disabled', disabledforeground='black')
+        ingredient_id = recipe_data[i][0]
+        recipe_id = recipe_data[i][1]
+        edit_button_ingredient_table_frame = Button(ingredient_table_frame, text="Edit",
+                                                    command=lambda ingredient_id=ingredient_id,
+                                                                   recipe_id=recipe_id: edit_ingredient_modal(
+                                                        ingredient_id, recipe_id),
+                                                    fg='black',
+                                                    font=main_font_underline, borderwidth=5, cursor='hand2')
+        delete_button_ingredient_table_frame = Button(ingredient_table_frame, text="Delete",
+                                                      command=lambda ingredient_id=ingredient_id,
+                                                                     recipe_id=recipe_id: delete_one_ingredient(
+                                                          recipe_id, ingredient_id), fg='black',
+                                                      font=main_font_underline, borderwidth=5, cursor='hand2')
+        edit_button_ingredient_table_frame.grid(row=i + 1, column=j - 1, ipadx=60, ipady=3)
+        delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=55, ipady=3)
+
+
+# ######################################################################################################################
+
+# DATABASE FUNCTIONS ###################################################################################################
+def build_database():
+    """
+    Used to build recipes.db to include: recipes, ingredients, and logs tables
+    :return:
+    """
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+
+    # RECIPES
+    c.execute("""CREATE TABLE IF NOT EXISTS recipes (
+            name text,
+            serving_size real,
+            date text        
+    )""")
+
+    # INGREDIENTS
+    c.execute("""CREATE TABLE IF NOT EXISTS ingredients (
+            recipe_id INTEGER,
+            name TEXT,
+            amount REAL,
+            unit TEXT,
+            CONSTRAINT fk_recipes 
+                FOREIGN KEY (recipe_id) 
+                REFERENCES recipes(oid)  
+                ON DELETE CASCADE    
+    )""")
+
+    # LOGS
+    c.execute("""CREATE TABLE IF NOT EXISTS logs (
+recipe_id INTEGER,
+log TEXT,
+CONSTRAINT fk_recipes
+    FOREIGN KEY (recipe_id)
+    REFERENCES recipes(oid)
+    ON DELETE CASCADE
+)""")
+    conn.commit()
+    conn.close()
+
+
+# RECIPES
 def insert_recipe():
     """
     CREATE for one recipe entry. Uses data from add recipe modal.
@@ -264,34 +553,6 @@ def insert_recipe():
         view_all_recipes_table()
 
 
-def insert_ingredient(recipe_id):
-    """
-    CREATE for one ingredient entry given a respective recipe_id (FK). Uses add ingredient modal data.
-    :param recipe_id:
-    :return:
-    """
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    name = name_entry_add_ingredient.get()
-    amount = amount_entry_add_ingredient.get()
-    unit = unit_entry_add_ingredient.get()
-    if ingredient_data_val(name, amount, unit):
-        c.execute("INSERT INTO ingredients VALUES (:recipe_id, :name, :amount, :unit)",
-                  {
-                      'recipe_id': recipe_id,
-                      'name': name,
-                      'amount': amount,
-                      'unit': unit
-                  })
-    conn.commit()
-    conn.close()
-    add_ingredient.destroy()
-    for widgets in ingredient_table_frame.winfo_children():
-        widgets.destroy()
-    view_ingredient_table(recipe_id)
-
-
-# READ
 def query_all_recipes():
     """
     READ function for recipes table. Returns oid, * for all recipes entries.
@@ -323,6 +584,113 @@ def query_one_recipe(recipe_id):
     conn.commit()
     conn.close()
     return data
+
+
+def update_one_recipe(recipe_id):
+    """
+    UPDATE functionality for recipes table. If serving size is changed the servings conversion microservice is called
+    and all the corresponding recipe ingredients are modified.
+    :param recipe_id:
+    :return:
+    """
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+    name = name_entry_edit_recipe.get()
+    serving_size = serving_size_entry_edit_recipe.get()
+    date = date_entry_edit_recipe.get_date()
+    recipe_data = query_one_recipe(recipe_id)
+    if recipe_data_val(name, serving_size, date):
+        if str(serving_size) != str(float(recipe_data[0][2])):
+            serving_change = {"servings": [str(float(recipe_data[0][2])), str(serving_size)]}
+            rpc_servings_conversion(recipe_data, serving_change)
+        else:
+            c.execute("""UPDATE recipes SET 
+                 name = :name,
+                 serving_size = :serving_size,
+                 date = :date
+                 WHERE oid = :oid""",
+                      {
+                          "name": name,
+                          "serving_size": serving_size,
+                          "date": date,
+                          "oid": recipe_id
+                      })
+    conn.commit()
+    conn.close()
+    for widgets in recipe_table_frame.winfo_children():
+        widgets.destroy()
+    view_all_recipes_table()
+    edit_recipe.destroy()
+
+
+def delete_one_recipe(recipe_id):
+    """
+    DELETE one functionality for recipes table. Asks user to confirm delete. If yes the function deletes a single recipe
+    otherwise the function ends.
+    :param recipe_id:
+    :return:
+    """
+    if not tkinter.messagebox.askokcancel('Delete Warning',
+                                          'Deleting this entry is permanent.\nDo you want to continue?'):
+        return
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM recipes WHERE oid=' + str(recipe_id))
+
+    conn.commit()
+    conn.close()
+    for widgets in recipe_table_frame.winfo_children():
+        widgets.destroy()
+    view_all_recipes_table()
+
+
+def search_for_recipe_by_name(name):
+    """
+    SEARCH functionality for recipes table. Allows user to search for a given recipe if the name given matches any part
+    of a recipe name in the database.
+    :param name:
+    :return:
+    """
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+    c.execute('SELECT oid, * FROM recipes WHERE recipes.name LIKE "%' + str(name) + '%"')
+    recipes_data = c.fetchall()
+    conn.commit()
+    conn.close()
+    if recipes_data:
+        for widgets in recipe_table_frame.winfo_children():
+            widgets.destroy()
+        view_all_recipes_table(recipes_data)
+    else:
+        tkinter.messagebox.showerror('No Recipes Exist', 'No recipes exists with the name: ' + name)
+
+
+# INGREDIENTS
+def insert_ingredient(recipe_id):
+    """
+    CREATE for one ingredient entry given a respective recipe_id (FK). Uses add ingredient modal data.
+    :param recipe_id:
+    :return:
+    """
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+    name = name_entry_add_ingredient.get()
+    amount = amount_entry_add_ingredient.get()
+    unit = unit_entry_add_ingredient.get()
+    if ingredient_data_val(name, amount, unit):
+        c.execute("INSERT INTO ingredients VALUES (:recipe_id, :name, :amount, :unit)",
+                  {
+                      'recipe_id': recipe_id,
+                      'name': name,
+                      'amount': amount,
+                      'unit': unit
+                  })
+    conn.commit()
+    conn.close()
+    add_ingredient.destroy()
+    for widgets in ingredient_table_frame.winfo_children():
+        widgets.destroy()
+    view_ingredient_table(recipe_id)
 
 
 def query_all_ingredients_for_recipe(recipe_id):
@@ -374,44 +742,6 @@ def query_one_log(recipe_id):
     conn.commit()
     conn.close()
     return data
-
-
-# UPDATE
-def update_one_recipe(recipe_id):
-    """
-    UPDATE functionality for recipes table. If serving size is changed the servings conversion microservice is called
-    and all the corresponding recipe ingredients are modified.
-    :param recipe_id:
-    :return:
-    """
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    name = name_entry_edit_recipe.get()
-    serving_size = serving_size_entry_edit_recipe.get()
-    date = date_entry_edit_recipe.get_date()
-    recipe_data = query_one_recipe(recipe_id)
-    if recipe_data_val(name, serving_size, date):
-        if str(serving_size) != str(float(recipe_data[0][2])):
-            serving_change = {"servings": [str(float(recipe_data[0][2])), str(serving_size)]}
-            rpc_servings_conversion(recipe_data, serving_change)
-        else:
-            c.execute("""UPDATE recipes SET 
-                 name = :name,
-                 serving_size = :serving_size,
-                 date = :date
-                 WHERE oid = :oid""",
-                      {
-                          "name": name,
-                          "serving_size": serving_size,
-                          "date": date,
-                          "oid": recipe_id
-                      })
-    conn.commit()
-    conn.close()
-    for widgets in recipe_table_frame.winfo_children():
-        widgets.destroy()
-    view_all_recipes_table()
-    edit_recipe.destroy()
 
 
 def update_one_ingredient(ingredient_id, recipe_id):
@@ -506,6 +836,27 @@ def update_many_ingredients_servings_conversion(recipe_id, ingredients):
     view_all_recipes_table()
 
 
+def delete_one_ingredient(recipe_id, ingredient_id):
+    """
+    DELETE functionality for ingredients table. Deletes a single entry in ingredients corresponding to a given recipe.
+    :param recipe_id:
+    :param ingredient_id:
+    :return:
+    """
+    if not tkinter.messagebox.askokcancel('Delete Warning',
+                                          'Deleting this entry is permanent.\nDo you want to continue?'):
+        return
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM ingredients WHERE oid=' + str(ingredient_id))
+    conn.commit()
+    conn.close()
+    for widgets in ingredient_table_frame.winfo_children():
+        widgets.destroy()
+    view_ingredient_table(recipe_id)
+
+
+# LOGS
 def insert_update_log(recipe_id):
     """
     CREATE/UPDATE functionality for logs table. If no log exists the function CREATES an entry. If a log exists the
@@ -540,296 +891,14 @@ def insert_update_log(recipe_id):
     tkinter.messagebox.showinfo('Success!', 'You have successfully updated the log for: ' + recipe_data[0][1])
 
 
-# DELETE
-def delete_one_recipe(recipe_id):
-    """
-    DELETE one functionality for recipes table. Asks user to confirm delete. If yes the function deletes a single recipe
-    otherwise the function ends.
-    :param recipe_id:
-    :return:
-    """
-    if not tkinter.messagebox.askokcancel('Delete Warning',
-                                          'Deleting this entry is permanent.\nDo you want to continue?'):
-        return
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    c.execute('DELETE FROM recipes WHERE oid=' + str(recipe_id))
+# ######################################################################################################################
 
-    conn.commit()
-    conn.close()
-    for widgets in recipe_table_frame.winfo_children():
-        widgets.destroy()
-    view_all_recipes_table()
-
-
-def delete_one_ingredient(recipe_id, ingredient_id):
-    if not tkinter.messagebox.askokcancel('Delete Warning',
-                                          'Deleting this entry is permanent.\nDo you want to continue?'):
-        return
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    c.execute('DELETE FROM ingredients WHERE oid=' + str(ingredient_id))
-    conn.commit()
-    conn.close()
-    for widgets in ingredient_table_frame.winfo_children():
-        widgets.destroy()
-    view_ingredient_table(recipe_id)
-
-
-# SEARCH
-def search_for_recipe_by_name(name):
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    c.execute('SELECT oid, * FROM recipes WHERE recipes.name LIKE "%' + str(name) + '%"')
-    recipes_data = c.fetchall()
-    conn.commit()
-    conn.close()
-    if recipes_data:
-        for widgets in recipe_table_frame.winfo_children():
-            widgets.destroy()
-        view_all_recipes_table(recipes_data)
-    else:
-        tkinter.messagebox.showerror('No Recipes Exist', 'No recipes exists with the name: ' + name)
-
-
-class RpcClient(object):
-
-    def __init__(self):
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
-
-        self.channel = self.connection.channel()
-
-        result = self.channel.queue_declare(queue='', exclusive=True)
-        self.callback_queue = result.method.queue
-
-        self.channel.basic_consume(
-            queue=self.callback_queue,
-            on_message_callback=self.on_response,
-            auto_ack=True)
-
-        self.response = None
-        self.corr_id = None
-
-    def on_response(self, ch, method, props, body):
-        if self.corr_id == props.correlation_id:
-            self.response = body.decode('utf-8')
-
-    def call(self, n):
-        self.response = None
-        self.corr_id = str(uuid.uuid4())
-        self.channel.basic_publish(
-            exchange='',
-            routing_key='data',
-            properties=pika.BasicProperties(
-                reply_to=self.callback_queue,
-                correlation_id=self.corr_id,
-            ),
-            body=str(n))
-        self.connection.process_data_events(time_limit=None)
-        return self.response
-
-
-def send_ingredient_unit_conversion(ingredient_json):
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-
-    channel.queue_declare(queue='conversion request')
-
-    channel.basic_publish(exchange='',
-                          routing_key='conversion request',
-                          body=json.dumps(ingredient_json)
-                          )
-    print(f" [x] Sent '{str(ingredient_json)}'")
-
-    connection.close()
-
-
-def rec_ingredient_unit_conversion(recipe_data, ingredient_data):
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-
-    channel.queue_declare(queue='conversion delivery')
-
-    def callback(ch, method, properties, body):
-        ingredient_name = ingredient_data[0][2]
-        recipe_name = recipe_data[0][1]
-        ingredient_id = ingredient_data[0][0]
-        recipe_id = recipe_data[0][0]
-        body = body.decode('utf-8')
-        print(" [x] Received %r" % body)
-        conn = sqlite3.connect('recipes.db')
-        c = conn.cursor()
-        body = json.loads(body)
-        c.execute("""UPDATE ingredients SET
-             name = :name,
-             amount = :amount,
-             unit = :unit
-             WHERE oid = :oid""",
-                  {
-                      "name": ingredient_name,
-                      "amount": str(round(float(body[recipe_name][0]["quantity"]), 2)),
-                      "unit": body[recipe_name][0]["measure"],
-                      "oid": ingredient_id
-                  }
-                  )
-        conn.commit()
-        conn.close()
-        for widgets in ingredient_table_frame.winfo_children():
-            widgets.destroy()
-        view_ingredient_table(recipe_id)
-        channel.close()
-
-    channel.basic_consume(queue='conversion delivery',
-                          auto_ack=True,
-                          on_message_callback=callback)
-
-    print(' [*] rec_ingredient_unit_conversion() Waiting for messages. To exit press CTRL+C')
-    channel.start_consuming()
-
-
-def rpc_servings_conversion(recipe_data, serving_change):
-    """
-    Helper function for RpcClient to facilitate Servings Conversion Microservice
-    :param recipe_data:
-    :param serving_change:
-    :return:
-    """
-    recipe_id = recipe_data[0][0]
-    ingredient_data = query_all_ingredients_for_recipe(recipe_id)
-    conversion_request = [serving_change]
-    for i in range(len(ingredient_data)):
-        ingredient_request = {"ingredient": str(ingredient_data[i][2]), "qty": str(ingredient_data[i][3]),
-                              "measure": str(ingredient_data[i][4])}
-        conversion_request.append(ingredient_request)
-    conversion_request = json.dumps(conversion_request)
-    rpc = RpcClient()
-    data = rpc.call(conversion_request)
-    update_many_ingredients_servings_conversion(recipe_id, data)
-
-
-def view_all_recipes_table(recipes_data=None):
-    if recipes_data is None:
-        recipes_data = query_all_recipes()
-    header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added', 'View', 'Edit', 'Delete')]
-    # headers
-    for i in range(len(header)):
-        for j in range(len(header[0])):
-            e = Entry(recipe_table_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
-            e.grid(row=i, column=j, ipadx=10, ipady=10)
-            e.insert(END, header[i][j])
-            e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff', font='arial 14 bold')
-    if not recipes_data:
-        no_recipes_label = Label(recipe_table_frame,
-                                 text="There are no recipes in the database. \nAdd a recipe to continue",
-                                 font='arial 24')
-        no_recipes_label.grid(row=1, column=0, columnspan=4, padx=25, pady=25)
-        return
-    # recipes data
-    for i in range(len(recipes_data)):
-        for j in range(len(recipes_data[0])):
-            e = Entry(recipe_table_frame, width=24, font=main_font, border=2, cursor='arrow')
-            e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
-            e.insert(END, recipes_data[i][j])
-            if i % 2 == 0:
-                e.config(state='disabled', disabledbackground='#fff', disabledforeground='#000', font='arial 12')
-            else:
-                e.config(state='disabled', disabledbackground='#ddd', disabledforeground='#000', font='arial 12')
-        oid = recipes_data[i][0]
-        name = recipes_data[i][1]
-        view_button_add_recipe = Button(recipe_table_frame, text="View",
-                                        command=lambda oid=oid, name=name: view_recipe_window(oid, name),
-                                        fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
-        edit_button_add_recipe = Button(recipe_table_frame, text="Edit",
-                                        command=lambda oid=oid, name=name: edit_recipe_modal(oid, name),
-                                        fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
-        delete_button_add_recipe = Button(recipe_table_frame, text="Delete",
-                                          command=lambda oid=oid: delete_one_recipe(oid), fg='black',
-                                          font=main_font_underline, borderwidth=5, cursor='hand2')
-        view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=95, ipady=3)
-        edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=95, ipady=3)
-        delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=95, ipady=3)
-
-
-def view_one_recipe_table(frame, recipe_id, edit=False):
-    recipe_data = query_one_recipe(recipe_id)
-    if not edit:
-        header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added')]
-    else:
-        header = [('Recipe Number', 'Name', 'Serving Size', 'Date Added', 'View', 'Edit', 'Delete')]
-    # headers
-    for i in range(len(header)):
-        for j in range(len(header[0])):
-            e = Entry(frame, width=20, font=main_font_bold, border=2, cursor='arrow')
-            e.grid(row=i, column=j, ipadx=10, ipady=10)
-            e.insert(END, header[i][j])
-            e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff')
-    # recipe data
-    for i in range(len(recipe_data)):
-        for j in range(len(recipe_data[0])):
-            e = Entry(frame, width=20, font=main_font, border=2, cursor='arrow')
-            e.grid(row=i + 1, column=j, ipadx=10, ipady=10)
-            e.insert(END, recipe_data[i][j])
-            e.config(state='disabled', disabledforeground='black')
-        oid = recipe_data[i][0]
-        name = recipe_data[i][1]
-        if edit:
-            view_button_add_recipe = Button(frame, text="View",
-                                            command=lambda oid=oid, name=name: view_recipe_window(oid, name),
-                                            fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
-            edit_button_add_recipe = Button(frame, text="Edit",
-                                            command=lambda oid=oid, name=name: edit_recipe_modal(oid, name),
-                                            fg='black', font=main_font_underline, borderwidth=5, cursor='hand2')
-            delete_button_add_recipe = Button(frame, text="Delete",
-                                              command=lambda oid=oid: delete_one_recipe(oid), fg='black',
-                                              font=main_font_underline, borderwidth=5, cursor='hand2')
-            view_button_add_recipe.grid(row=i + 1, column=j + 1, ipadx=75, ipady=3)
-            edit_button_add_recipe.grid(row=i + 1, column=j + 2, ipadx=75, ipady=3)
-            delete_button_add_recipe.grid(row=i + 1, column=j + 3, ipadx=75, ipady=3)
-
-
-def view_ingredient_table(recipe_id):
-    recipe_data = query_all_ingredients_for_recipe(recipe_id)
-    header = [('Name', 'Amount', 'Unit', 'Edit', 'Delete')]
-    for i in range(len(header)):
-        for j in range(len(header[0])):
-            e = Entry(ingredient_table_frame, width=20, font=main_font_bold, border=2, cursor='arrow')
-            e.grid(row=i, column=j, ipadx=10, ipady=10)
-            e.insert(END, header[i][j])
-            e.config(state='disabled', disabledbackground='#444', disabledforeground='#fff')
-    if recipe_data == []:
-        no_ingredients_label = Label(ingredient_table_frame,
-                                     text="There are no ingredients for this recipe. \nAdd an ingredient to continue",
-                                     font='arial 24')
-        no_ingredients_label.grid(row=1, column=0, columnspan=4, padx=25, pady=25)
-        return
-
-    for i in range(len(recipe_data)):
-        for j in range(2, len(recipe_data[0])):
-            e = Entry(ingredient_table_frame, width=20, font=main_font, border=2, cursor='arrow')
-            e.grid(row=i + 1, column=j - 2, ipadx=10, ipady=10)
-            e.insert(END, recipe_data[i][j])
-            e.config(state='disabled', disabledforeground='black')
-        ingredient_id = recipe_data[i][0]
-        recipe_id = recipe_data[i][1]
-        edit_button_ingredient_table_frame = Button(ingredient_table_frame, text="Edit",
-                                                    command=lambda ingredient_id=ingredient_id,
-                                                                   recipe_id=recipe_id: edit_ingredient_modal(
-                                                        ingredient_id, recipe_id),
-                                                    fg='black',
-                                                    font=main_font_underline, borderwidth=5, cursor='hand2')
-        delete_button_ingredient_table_frame = Button(ingredient_table_frame, text="Delete",
-                                                      command=lambda ingredient_id=ingredient_id,
-                                                                     recipe_id=recipe_id: delete_one_ingredient(
-                                                          recipe_id, ingredient_id), fg='black',
-                                                      font=main_font_underline, borderwidth=5, cursor='hand2')
-        edit_button_ingredient_table_frame.grid(row=i + 1, column=j - 1, ipadx=60, ipady=3)
-        delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=55, ipady=3)
-
-
+# MODAL WINDOWS ########################################################################################################
 def add_recipe_modal():
+    """
+    Modal window providing entry fields to add a recipe.
+    :return:
+    """
     global add_recipe
     add_recipe = Tk()
     tk_window_configure(add_recipe, 'Add a Recipe', modal_size, modal_bg, logo)
@@ -857,6 +926,12 @@ def add_recipe_modal():
 
 
 def edit_recipe_modal(recipe_id, name):
+    """
+    Modal window providing entry fields to edit a recipe.
+    :param recipe_id:
+    :param name:
+    :return:
+    """
     global edit_recipe
     edit_recipe = Tk()
     tk_window_configure(edit_recipe, 'Editing' + name, modal_size, modal_bg, logo)
@@ -890,6 +965,12 @@ def edit_recipe_modal(recipe_id, name):
 
 
 def add_ingredient_modal(recipe_id):
+    """
+    Modal window for entry fields to allow creation of ingredient entries.
+    :param recipe_id:
+    :return:
+    """
+
     def items_selected(event):
         # get selected indices
         selected_indices = name_entry_listbox_add_ingredient.curselection()
@@ -943,6 +1024,13 @@ def add_ingredient_modal(recipe_id):
 
 
 def edit_ingredient_modal(ingredient_id, recipe_id):
+    """
+    Modal window to allow for editing an ingredient entry.
+    :param ingredient_id:
+    :param recipe_id:
+    :return:
+    """
+
     def items_selected(event):
         # get selected indices
         selected_indices = name_entry_listbox_edit_ingredient.curselection()
@@ -1001,6 +1089,10 @@ def edit_ingredient_modal(ingredient_id, recipe_id):
 
 
 def help_modal():
+    """
+    Modal window for help & documentation.
+    :return:
+    """
     global help_window
     help_window = Toplevel()
     help_window.title('Help')
@@ -1278,8 +1370,14 @@ def help_modal():
     notebook.add(search_help, text='Search for Recipes')
 
 
+# ######################################################################################################################
+
+# WINDOWS ##############################################################################################################
 def main():
-    # ############ INITIALIZE ROOT WINDOW ########################################
+    """
+    Root window, initializes database upon first startup and opens root window with GUI.
+    :return:
+    """
     global root
     root = Tk()
     tk_window_configure(root, 'Recipe Database', main_size, main_bg, logo)
@@ -1315,6 +1413,12 @@ def main():
 
 
 def view_recipe_window(recipe_id, name):
+    """
+    Secondary window to provide functionality for a specific recipe.
+    :param recipe_id:
+    :param name:
+    :return:
+    """
     root.destroy()
     global view_recipe
     view_recipe = Tk()
@@ -1362,6 +1466,9 @@ def view_recipe_window(recipe_id, name):
 
     menu(view_recipe)
     view_recipe.config(menu=menubar)
+
+
+# ######################################################################################################################
 
 
 if __name__ == '__main__':
