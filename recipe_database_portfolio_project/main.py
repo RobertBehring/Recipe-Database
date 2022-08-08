@@ -59,7 +59,7 @@ help_title_font = 'arial 20 bold'
 # ######################################################################################################################
 
 # GLOBAL FUNCTIONS #####################################################################################################
-def tk_window_configure(window, title: str, geoemetry: str, bg_color, logo=None):
+def tk_window_configure(window, title: str, geometry: str, bg_color, logo=None):
     """
     Provides window configuration to conform to program styling.
     :param window:
@@ -70,7 +70,7 @@ def tk_window_configure(window, title: str, geoemetry: str, bg_color, logo=None)
     :return:
     """
     window.title(title)
-    window.geometry(geoemetry)
+    window.geometry(geometry)
     if logo:
         window.iconbitmap(logo)
     window.configure(bg=bg_color)
@@ -976,8 +976,9 @@ def add_ingredient_modal(recipe_id):
         selected_indices = name_entry_listbox_add_ingredient.curselection()
         # get selected items
         selected_langs = ",".join([name_entry_listbox_add_ingredient.get(i) for i in selected_indices])
-        name_entry_add_ingredient.delete(0, 'end')
-        name_entry_add_ingredient.insert('end', selected_langs)
+        if selected_langs in ingredients:
+            name_entry_add_ingredient.delete(0, 'end')
+            name_entry_add_ingredient.insert('end', selected_langs)
 
     def checkkey(event):
         value = event.widget.get()
@@ -1036,8 +1037,9 @@ def edit_ingredient_modal(ingredient_id, recipe_id):
         selected_indices = name_entry_listbox_edit_ingredient.curselection()
         # get selected items
         selected_langs = ",".join([name_entry_listbox_edit_ingredient.get(i) for i in selected_indices])
-        name_entry_edit_ingredient.delete(0, 'end')
-        name_entry_edit_ingredient.insert('end', selected_langs)
+        if selected_langs in ingredients:
+            name_entry_edit_ingredient.delete(0, 'end')
+            name_entry_edit_ingredient.insert('end', selected_langs)
 
     def checkkey(event):
         value = event.widget.get()
