@@ -41,6 +41,32 @@ help_title_font = 'arial 20 bold'
 today = date.today()
 
 
+def tk_window_configure(window, title: str, geoemetry: str, bg_color, logo=None):
+    window.title(title)
+    window.geometry(geoemetry)
+    if logo:
+        window.iconbitmap(logo)
+    window.configure(bg=bg_color)
+
+
+def checkkey(event):
+    value = event.widget.get()
+    if value == '':
+        data = ingredients
+    else:
+        data = []
+        for item in ingredients:
+            if value.lower() in item.lower():
+                data.append(item)
+    update(data)
+
+
+def update(data, entry_field):
+    entry_field.delete(0, 'end')
+    for item in data:
+        entry_field.insert('end', item)
+
+
 def home(window):
     window.destroy()
     main()
@@ -377,13 +403,7 @@ def help_modal():
     notebook.add(search_help, text='Search for Recipes')
 
 
-# CREATE
-def insert_recipe():
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    name = name_entry_add_recipe.get()
-    serving_size = serving_size_entry_add_recipe.get()
-    date = date_entry_add_recipe.get_date()
+def recipe_data_val(name, serving_size, date):
     name_isempty = name == ''
     name_isascii = name.isascii()
     serving_size_isempty = serving_size == ''
@@ -406,37 +426,10 @@ def insert_recipe():
     elif not serving_size_isfloat:
         tkinter.messagebox.showerror('Error', 'Serving Size entry is invalid')
     else:
-        c.execute("INSERT INTO recipes VALUES (:name, :servings, :date)",
-                  {
-                      'name': name,
-                      'servings': serving_size,
-                      'date': date
-                  })
-        c.execute('SELECT oid, name FROM recipes')
-        data = c.fetchall()
-        oid = data[-1][0]
-        name = data[-1][1]
-        conn.commit()
-        conn.close()
-        add_recipe.destroy()
-        view_recipe_window(oid, name)
-        return
-
-    conn.commit()
-    conn.close()
-
-    add_recipe.destroy()
-    for widgets in recipe_table_frame.winfo_children():
-        widgets.destroy()
-    view_all_recipes_table()
+        return True
 
 
-def insert_ingredient(recipe_id):
-    conn = sqlite3.connect('recipes.db')
-    c = conn.cursor()
-    name = name_entry_add_ingredient.get()
-    amount = amount_entry_add_ingredient.get()
-    unit = unit_entry_add_ingredient.get()
+def ingredient_data_val(name, amount, unit):
     name_isempty = name == ''
     name_isascii = name.isascii()
     amount_isempty = amount == ''
@@ -452,10 +445,14 @@ def insert_ingredient(recipe_id):
         tkinter.messagebox.showerror('Error', 'All fields are empty')
     elif name_isempty:
         tkinter.messagebox.showerror('Error', 'Name field is empty')
+    elif name not in ingredients:
+        tkinter.messagebox.showerror('Error', name + ' is not in the list of ingredients allowable for this database')
     elif amount_isempty:
         tkinter.messagebox.showerror('Error', 'Amount field is empty')
     elif unit_isempty:
         tkinter.messagebox.showerror('Error', 'Unit field is empty')
+    elif unit not in units:
+        tkinter.messagebox.showerror('Error', unit + ' is not in the list of units allowable for this database')
     elif not name_isascii and not amount_isfloat and not unit_isascii:
         tkinter.messagebox.showerror('Error', 'All entries are invalid')
     elif not name_isascii:
@@ -465,6 +462,45 @@ def insert_ingredient(recipe_id):
     elif not unit_isascii:
         tkinter.messagebox.showerror('Error', 'Unit entry is invalid')
     else:
+        return True
+
+
+# CREATE
+def insert_recipe():
+    name = name_entry_add_recipe.get()
+    serving_size = serving_size_entry_add_recipe.get()
+    date = date_entry_add_recipe.get_date()
+    if recipe_data_val(name, serving_size, date):
+        conn = sqlite3.connect('recipes.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO recipes VALUES (:name, :servings, :date)",
+                  {
+                      'name': name,
+                      'servings': serving_size,
+                      'date': date
+                  })
+        c.execute('SELECT oid, name FROM recipes')
+        data = c.fetchall()
+        oid = data[-1][0]
+        name = data[-1][1]
+        add_recipe.destroy()
+        view_recipe_window(oid, name)
+        conn.commit()
+        conn.close()
+    else:
+        add_recipe.destroy()
+        for widgets in recipe_table_frame.winfo_children():
+            widgets.destroy()
+        view_all_recipes_table()
+
+
+def insert_ingredient(recipe_id):
+    conn = sqlite3.connect('recipes.db')
+    c = conn.cursor()
+    name = name_entry_add_ingredient.get()
+    amount = amount_entry_add_ingredient.get()
+    unit = unit_entry_add_ingredient.get()
+    if ingredient_data_val(name, amount, unit):
         c.execute("INSERT INTO ingredients VALUES (:recipe_id, :name, :amount, :unit)",
                   {
                       'recipe_id': recipe_id,
@@ -472,10 +508,8 @@ def insert_ingredient(recipe_id):
                       'amount': amount,
                       'unit': unit
                   })
-
     conn.commit()
     conn.close()
-
     add_ingredient.destroy()
     for widgets in ingredient_table_frame.winfo_children():
         widgets.destroy()
@@ -549,53 +583,30 @@ def update_one_recipe(recipe_id):
     name = name_entry_edit_recipe.get()
     serving_size = serving_size_entry_edit_recipe.get()
     date = date_entry_edit_recipe.get_date()
-    name_isempty = name == ''
-    name_isascii = name.isascii()
-    serving_size_isempty = serving_size == ''
     recipe_data = query_one_recipe(recipe_id)
-    try:
-        float(serving_size)
-        serving_size_isfloat = True
-    except:
-        serving_size_isfloat = False
-    if name_isempty and serving_size_isempty:
-        tkinter.messagebox.showerror('Error', 'Both Name and Serving Size fields are empty')
-    elif name_isempty:
-        tkinter.messagebox.showerror('Error', 'Name field is empty')
-    elif serving_size_isempty:
-        tkinter.messagebox.showerror('Error', 'Serving Size field is empty')
-    elif not name_isascii and not serving_size_isfloat:
-        tkinter.messagebox.showerror('Error', 'Both Name and Serving Size entries are invalid')
-    elif not name_isascii:
-        tkinter.messagebox.showerror('Error', 'Name entry is invalid')
-    elif not serving_size_isfloat:
-        tkinter.messagebox.showerror('Error', 'Serving Size entry is invalid')
-    elif serving_size != recipe_data[0][2]:
-        serving_change = {"servings": [str(int(recipe_data[0][2])), serving_size]}
-        rpc_servings_conversion(recipe_data, serving_change)
-    else:
-        c.execute("""UPDATE recipes SET 
-             name = :name,
-             serving_size = :serving_size,
-             date = :date
-             WHERE oid = :oid""",
-                  {
-                      "name": name,
-                      "serving_size": serving_size,
-                      "date": date,
-                      "oid": recipe_id
-                  }
-                  )
-        conn.commit()
-        conn.close()
-        edit_recipe.destroy()
+    if recipe_data_val(name, serving_size, date):
+        if str(serving_size) != str(float(recipe_data[0][2])):
+            serving_change = {"servings": [str(float(recipe_data[0][2])), str(serving_size)]}
+            rpc_servings_conversion(recipe_data, serving_change)
+        else:
+            c.execute("""UPDATE recipes SET 
+                 name = :name,
+                 serving_size = :serving_size,
+                 date = :date
+                 WHERE oid = :oid""",
+                      {
+                          "name": name,
+                          "serving_size": serving_size,
+                          "date": date,
+                          "oid": recipe_id
+                      }
+                      )
         for widgets in recipe_table_frame.winfo_children():
             widgets.destroy()
         view_all_recipes_table()
-        return
+    edit_recipe.destroy()
     conn.commit()
     conn.close()
-    edit_recipe.destroy()
 
 
 def update_one_ingredient(ingredient_id, recipe_id):
@@ -604,64 +615,33 @@ def update_one_ingredient(ingredient_id, recipe_id):
     name = name_entry_edit_ingredient.get()
     amount = amount_entry_edit_ingredient.get()
     unit = unit_entry_edit_ingredient.get()
-    name_isempty = name == ''
-    name_isascii = name.isascii()
-    amount_isempty = amount == ''
     ingredient_data = query_one_ingredient(ingredient_id)
     recipe_data = query_one_recipe(recipe_id)
     ingredient_json = {str(recipe_data[0][1]): [
         {"ingredient": str(ingredient_data[0][2]), "quantity": str(ingredient_data[0][3]),
          "measure": str(ingredient_data[0][4]), "desired": str(unit)}]}
-    try:
-        float(amount)
-        amount_isfloat = True
-    except:
-        amount_isfloat = False
-    unit_isempty = unit == ''
-    unit_isascii = unit.isascii()
-
-    if name_isempty and amount_isempty and unit_isempty:
-        tkinter.messagebox.showerror('Error', 'All fields are empty')
-    elif name_isempty:
-        tkinter.messagebox.showerror('Error', 'Name field is empty')
-    elif amount_isempty:
-        tkinter.messagebox.showerror('Error', 'Amount field is empty')
-    elif unit_isempty:
-        tkinter.messagebox.showerror('Error', 'Unit field is empty')
-    elif not name_isascii and not amount_isfloat and not unit_isascii:
-        tkinter.messagebox.showerror('Error', 'All entries are invalid')
-    elif not name_isascii:
-        tkinter.messagebox.showerror('Error', 'Name entry is invalid')
-    elif not amount_isfloat:
-        tkinter.messagebox.showerror('Error', 'Amount entry is invalid')
-    elif not unit_isascii:
-        tkinter.messagebox.showerror('Error', 'Unit entry is invalid')
-    elif unit != ingredient_data[0][4] and float(amount) == ingredient_data[0][3]:
-        send_ingredient_unit_conversion(ingredient_json)
-        rec_ingredient_unit_conversion(recipe_data, ingredient_data)
-    else:
-        c.execute("""UPDATE ingredients SET 
-             name = :name,
-             amount = :amount,
-             unit = :unit
-             WHERE oid = :oid""",
-                  {
-                      "name": name,
-                      "amount": amount,
-                      "unit": unit,
-                      "oid": ingredient_id
-                  }
-                  )
-        conn.commit()
-        conn.close()
-        edit_ingredient.destroy()
-        for widgets in ingredient_table_frame.winfo_children():
-            widgets.destroy()
-        view_ingredient_table(recipe_id)
-        return
+    if ingredient_data_val(name, amount, unit):
+        if unit != ingredient_data[0][4] and float(amount) == ingredient_data[0][3]:
+            send_ingredient_unit_conversion(ingredient_json)
+            rec_ingredient_unit_conversion(recipe_data, ingredient_data)
+        else:
+            c.execute("""UPDATE ingredients SET 
+                 name = :name,
+                 amount = :amount,
+                 unit = :unit
+                 WHERE oid = :oid""",
+                      {
+                          "name": name,
+                          "amount": amount,
+                          "unit": unit,
+                          "oid": ingredient_id
+                      })
     conn.commit()
     conn.close()
     edit_ingredient.destroy()
+    for widgets in ingredient_table_frame.winfo_children():
+        widgets.destroy()
+    view_ingredient_table(recipe_id)
 
 
 def update_many_ingredients_servings_conversion(recipe_id, ingredients):
@@ -765,6 +745,7 @@ def delete_one_ingredient(recipe_id, ingredient_id):
     view_ingredient_table(recipe_id)
 
 
+# SEARCH
 def search_for_recipe_by_name(name):
     conn = sqlite3.connect('recipes.db')
     c = conn.cursor()
@@ -1012,13 +993,39 @@ def view_ingredient_table(recipe_id):
         delete_button_ingredient_table_frame.grid(row=i + 1, column=j, ipadx=55, ipady=3)
 
 
+def add_recipe_modal():
+    global add_recipe
+    add_recipe = Tk()
+    tk_window_configure(add_recipe, 'Add a Recipe', modal_size, modal_bg, logo)
+    year, month, day = today.strftime('%y'), today.strftime('%m'), today.strftime('%d')
+
+    global name_entry_add_recipe
+    global serving_size_entry_add_recipe
+    global date_entry_add_recipe
+    name_label_add_recipe = Label(add_recipe, text='Name', bg=modal_bg)
+    name_entry_add_recipe = Entry(add_recipe, width=30)
+    serving_size_label_add_recipe = Label(add_recipe, text='Serving Size', bg=modal_bg)
+    serving_size_entry_add_recipe = Entry(add_recipe, width=30)
+    date_label_add_recipe = Label(add_recipe, text='Date', bg=modal_bg)
+    date_entry_add_recipe = Calendar(add_recipe, selectmode='day',
+                                     year=int(year), month=int(month),
+                                     day=int(day))
+
+    add_recipe_button = Button(add_recipe, text='Add', command=insert_recipe, border=3, cursor='hand2')
+
+    name_label_add_recipe.grid(row=0, column=0, sticky='w', padx=5)
+    name_entry_add_recipe.grid(row=0, column=1)
+    serving_size_label_add_recipe.grid(row=1, column=0, sticky='w', padx=5)
+    serving_size_entry_add_recipe.grid(row=1, column=1)
+    date_label_add_recipe.grid(row=2, column=0, columnspan=2)
+    date_entry_add_recipe.grid(row=3, column=0, columnspan=2, padx=10)
+    add_recipe_button.grid(row=4, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
+
+
 def edit_recipe_modal(recipe_id, name):
     global edit_recipe
     edit_recipe = Tk()
-    edit_recipe.title('Editing: ' + name)
-    edit_recipe.geometry(modal_size)
-    edit_recipe.iconbitmap(logo)
-    edit_recipe.configure(bg=modal_bg)
+    tk_window_configure(edit_recipe, 'Editing' + name, modal_size, modal_bg, logo)
     recipe_data = query_one_recipe(recipe_id)
     date = recipe_data[0][3].split('/')
 
@@ -1049,22 +1056,6 @@ def edit_recipe_modal(recipe_id, name):
 
 
 def add_ingredient_modal(recipe_id):
-    def checkkey(event):
-        value = event.widget.get()
-        if value == '':
-            data = ingredients
-        else:
-            data = []
-            for item in ingredients:
-                if value.lower() in item.lower():
-                    data.append(item)
-        update(data)
-
-    def update(data):
-        name_entry_listbox_add_ingredient.delete(0, 'end')
-        for item in data:
-            name_entry_listbox_add_ingredient.insert('end', item)
-
     def items_selected(event):
         # get selected indices
         selected_indices = name_entry_listbox_add_ingredient.curselection()
@@ -1075,10 +1066,7 @@ def add_ingredient_modal(recipe_id):
 
     global add_ingredient
     add_ingredient = Tk()
-    add_ingredient.title('Add Ingredient')
-    add_ingredient.geometry('583x225')
-    add_ingredient.iconbitmap(logo)
-    add_ingredient.configure(bg=modal_bg)
+    tk_window_configure(add_ingredient, 'Add Ingredient', '583x225', modal_bg, logo)
 
     global name_entry_add_ingredient
     global amount_entry_add_ingredient
@@ -1100,7 +1088,7 @@ def add_ingredient_modal(recipe_id):
     name_entry_add_ingredient.bind('<KeyRelease>', checkkey)
     name_entry_listbox_add_ingredient.grid(row=2, column=0, rowspan=3, padx=5)
     name_entry_listbox_add_ingredient.bind('<<ListboxSelect>>', items_selected)
-    update(ingredients)
+    update(ingredients, name_entry_listbox_add_ingredient)
     amount_label_add_ingredient.grid(row=0, column=1, sticky='w', padx=5)
     amount_entry_add_ingredient.grid(row=1, column=1, padx=5)
     unit_label_add_ingredient.grid(row=0, column=2, sticky='w', padx=5)
@@ -1110,22 +1098,6 @@ def add_ingredient_modal(recipe_id):
 
 
 def edit_ingredient_modal(ingredient_id, recipe_id):
-    def checkkey(event):
-        value = event.widget.get()
-        if value == '':
-            data = ingredients
-        else:
-            data = []
-            for item in ingredients:
-                if value.lower() in item.lower():
-                    data.append(item)
-        update(data)
-
-    def update(data):
-        name_entry_listbox_edit_ingredient.delete(0, 'end')
-        for item in data:
-            name_entry_listbox_edit_ingredient.insert('end', item)
-
     def items_selected(event):
         # get selected indices
         selected_indices = name_entry_listbox_edit_ingredient.curselection()
@@ -1136,10 +1108,7 @@ def edit_ingredient_modal(ingredient_id, recipe_id):
 
     global edit_ingredient
     edit_ingredient = Tk()
-    edit_ingredient.title('Edit Ingredient')
-    edit_ingredient.geometry('583x225')
-    edit_ingredient.iconbitmap(logo)
-    edit_ingredient.configure(bg=modal_bg)
+    tk_window_configure(edit_ingredient, 'Edit Ingredient', '583x225', modal_bg, logo)
     ingredient_data = query_one_ingredient(ingredient_id)
 
     global name_entry_edit_ingredient
@@ -1167,7 +1136,7 @@ def edit_ingredient_modal(ingredient_id, recipe_id):
     name_entry_edit_ingredient.bind('<KeyRelease>', checkkey)
     name_entry_listbox_edit_ingredient.grid(row=2, column=0, rowspan=3, padx=5)
     name_entry_listbox_edit_ingredient.bind('<<ListboxSelect>>', items_selected)
-    update(ingredients)
+    update(ingredients, name_entry_listbox_edit_ingredient)
     amount_label_edit_ingredient.grid(row=0, column=1, sticky='w', padx=5)
     amount_entry_edit_ingredient.grid(row=1, column=1, padx=5)
     unit_label_edit_ingredient.grid(row=0, column=2, sticky='w', padx=5)
@@ -1175,46 +1144,11 @@ def edit_ingredient_modal(ingredient_id, recipe_id):
     edit_ingredient_button.grid(row=3, column=2, columnspan=2, padx=10, pady=10, ipadx=50, sticky='s')
 
 
-def add_recipe_modal():
-    global add_recipe
-    add_recipe = Tk()
-    add_recipe.title('Add a Recipe')
-    add_recipe.geometry(modal_size)
-    add_recipe.iconbitmap(logo)
-    add_recipe.configure(bg=modal_bg)
-    year, month, day = today.strftime('%y'), today.strftime('%m'), today.strftime('%d')
-
-    global name_entry_add_recipe
-    global serving_size_entry_add_recipe
-    global date_entry_add_recipe
-    name_label_add_recipe = Label(add_recipe, text='Name', bg=modal_bg)
-    name_entry_add_recipe = Entry(add_recipe, width=30)
-    serving_size_label_add_recipe = Label(add_recipe, text='Serving Size', bg=modal_bg)
-    serving_size_entry_add_recipe = Entry(add_recipe, width=30)
-    date_label_add_recipe = Label(add_recipe, text='Date', bg=modal_bg)
-    date_entry_add_recipe = Calendar(add_recipe, selectmode='day',
-                                     year=int(year), month=int(month),
-                                     day=int(day))
-
-    add_recipe_button = Button(add_recipe, text='Add', command=insert_recipe, border=3, cursor='hand2')
-
-    name_label_add_recipe.grid(row=0, column=0, sticky='w', padx=5)
-    name_entry_add_recipe.grid(row=0, column=1)
-    serving_size_label_add_recipe.grid(row=1, column=0, sticky='w', padx=5)
-    serving_size_entry_add_recipe.grid(row=1, column=1)
-    date_label_add_recipe.grid(row=2, column=0, columnspan=2)
-    date_entry_add_recipe.grid(row=3, column=0, columnspan=2, padx=10)
-    add_recipe_button.grid(row=4, column=0, columnspan=2, padx=10, pady=10, ipadx=50)
-
-
 def main():
     # ############ INITIALIZE ROOT WINDOW ########################################
     global root
     root = Tk()
-    root.title('Recipe Database')
-    root.iconbitmap(logo)
-    root.geometry(main_size)
-    root.configure(bg=main_bg)
+    tk_window_configure(root, 'Recipe Database', main_size, main_bg, logo)
     root.state('zoomed')
     global recipe_table_frame
     recipe_table_frame = Frame(root)
@@ -1252,10 +1186,7 @@ def view_recipe_window(recipe_id, name):
     root.destroy()
     global view_recipe
     view_recipe = Tk()
-    view_recipe.title(f'Viewing Recipe: {name}')
-    view_recipe.geometry(main_size)
-    view_recipe.iconbitmap(logo)
-    view_recipe.configure(bg=main_bg)
+    tk_window_configure(view_recipe, 'Viewing Recipe: ' + name, main_size, main_bg, logo)
     view_recipe.state('zoomed')
     global recipe_info_frame
     global ingredient_table_frame
